@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:15
+    container_name: splittrack-db
+    environment:
+      POSTGRES_DB: splittrack
+      POSTGRES_USER: splittrack
+      POSTGRES_PASSWORD: splittrack
+    volumes:
+      - splittrack_db:/var/lib/postgresql/data
+    command: ["postgres", "-c", "shared_buffers=128MB"]
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: splittrack-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/splittrack
+      SPRING_DATASOURCE_USERNAME: splittrack
+      SPRING_DATASOURCE_PASSWORD: splittrack
+      APP_PASSWORD: testhaslo
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  splittrack_db:
