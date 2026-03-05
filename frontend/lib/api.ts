@@ -15,7 +15,10 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   const password = getAppPassword();
 
   const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (!isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   if (password) {
     headers.set("X-App-Password", password);
   }
@@ -51,6 +54,11 @@ export const api = {
     fetchWithAuth(endpoint, {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+  postFormData: (endpoint: string, body: FormData) =>
+    fetchWithAuth(endpoint, {
+      method: "POST",
+      body,
     }),
   getBlob: async (endpoint: string) => {
     const url = `${BASE_URL}${endpoint}`;

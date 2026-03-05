@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Loader2, ArrowRightLeft } from "lucide-react";
+import { Loader2, ArrowRightLeft, ChevronDown } from "lucide-react";
 import type { SettlementDTO, Scope } from "@/lib/types";
 import { SettlementsTable } from "@/components/SettlementsTable";
 import { MonthPicker } from "@/components/MonthPicker";
@@ -81,6 +81,8 @@ export default function SettlementsPage() {
 
   const { watch, setValue, handleSubmit, reset, formState: { errors } } = form;
   const fromPerson = watch("fromPerson");
+  const personSelectClassName =
+    "w-full appearance-none px-3 pr-10 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-white theme-e:text-[#4a3840] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-stone-300 dark:hover:border-stone-700 text-sm font-medium";
 
   const handleSwapPeople = () => {
     setValue("fromPerson", fromPerson === "MACIEK" ? "EMILKA" : "MACIEK", {
@@ -126,13 +128,16 @@ export default function SettlementsPage() {
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-stone-500">Kto oddaje?</label>
-                  <select
-                    {...form.register("fromPerson")}
-                    className="w-full px-3 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
-                  >
-                    <option value="MACIEK">Maciek</option>
-                    <option value="EMILKA">Emilka</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      {...form.register("fromPerson")}
+                      className={personSelectClassName}
+                    >
+                      <option value="MACIEK">Maciek</option>
+                      <option value="EMILKA">Emilka</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 dark:text-stone-400 theme-e:text-[#8b6d7c]" />
+                  </div>
                 </div>
                 
                 <button
@@ -147,13 +152,16 @@ export default function SettlementsPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-stone-500">Komu?</label>
-                  <select
-                    {...form.register("toPerson")}
-                    className="w-full px-3 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
-                  >
-                    <option value="MACIEK">Maciek</option>
-                    <option value="EMILKA">Emilka</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      {...form.register("toPerson")}
+                      className={personSelectClassName}
+                    >
+                      <option value="MACIEK">Maciek</option>
+                      <option value="EMILKA">Emilka</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 dark:text-stone-400 theme-e:text-[#8b6d7c]" />
+                  </div>
                 </div>
               </div>
               {errors.toPerson && <p className="text-xs text-red-500">{errors.toPerson.message}</p>}
@@ -192,7 +200,7 @@ export default function SettlementsPage() {
               <button
                 type="submit"
                 disabled={loadingForm}
-                className="w-full py-2.5 px-4 mt-2 bg-emerald-600 hover:bg-emerald-700 theme-e:bg-fuchsia-600 theme-e:hover:bg-fuchsia-700 text-white font-medium rounded-xl shadow-sm transition-colors disabled:opacity-70 flex justify-center items-center gap-2"
+                className="w-full py-2.5 px-4 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl shadow-sm transition-colors disabled:opacity-70 flex justify-center items-center gap-2"
               >
                 {loadingForm && <Loader2 className="w-5 h-5 animate-spin" />}
                 Zapisz rozliczenie

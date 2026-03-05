@@ -1,6 +1,7 @@
 # Backend
 /backend/target/
 /backend/.m2/
+/backend/uploads/
 /backend/.classpath
 /backend/.project
 /backend/.settings/

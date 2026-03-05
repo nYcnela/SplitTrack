@@ -15,6 +15,9 @@ public class AppProperties {
     @NotBlank
     private String defaultCurrency = "PLN";
 
+    @NotBlank
+    private String uploadsDir = "uploads";
+
     public String getPassword() {
         return password;
     }
@@ -37,6 +40,14 @@ public class AppProperties {
 
     public void setDefaultCurrency(String defaultCurrency) {
         this.defaultCurrency = defaultCurrency;
+    }
+
+    public String getUploadsDir() {
+        return uploadsDir;
+    }
+
+    public void setUploadsDir(String uploadsDir) {
+        this.uploadsDir = uploadsDir;
     }
 
     public static class Cors {

@@ -1,5 +1,5 @@
 export type Person = "MACIEK" | "EMILKA";
-export type SettlementMode = "NOT_SETTLED" | "HALF" | "CUSTOM";
+export type SettlementMode = "NOT_SETTLED" | "HALF" | "FULL" | "CUSTOM";
 export type Scope = "cycle" | "month" | "lifetime";
 export type BalanceDirection = "MACIEK_OWES_EMILKA" | "EMILKA_OWES_MACIEK" | "EVEN";
 
@@ -16,6 +16,7 @@ export interface ExpenseDTO {
 
   settlementMode: SettlementMode;
   customOwedPLN?: number | null;
+  receiptUrl?: string | null;
 
   maciekPaid?: number | null;
   emilkaPaid?: number | null;

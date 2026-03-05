@@ -20,3 +20,4 @@ app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:*}
   default-currency: PLN
+  uploads-dir: ${APP_UPLOADS_DIR:uploads}

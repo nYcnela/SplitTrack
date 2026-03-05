@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,14 +8,14 @@ import * as z from "zod";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2, Upload, X } from "lucide-react";
 import Link from "next/link";
 
 const expenseSchema = z.object({
   expenseDate: z.string().min(1, "Data jest wymagana"),
   description: z.string().min(1, "Opis jest wymagany").max(200, "Za długi opis"),
   payer: z.enum(["MACIEK", "EMILKA"]),
-  settlementMode: z.enum(["NOT_SETTLED", "HALF", "CUSTOM"]),
+  settlementMode: z.enum(["NOT_SETTLED", "HALF", "FULL", "CUSTOM"]),
   inputAmount: z.number().positive("Kwota musi być większa od 0"),
   inputCurrency: z.string().min(1, "Wybierz walutę"),
   exchangeRateToPLN: z.number().optional().nullable(),
@@ -42,6 +42,8 @@ type ExpenseFormValues = z.infer<typeof expenseSchema>;
 export default function NewExpensePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const receiptInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -62,6 +64,8 @@ export default function NewExpensePage() {
   const settlementMode = watch("settlementMode");
   
   const isForeign = currency !== "PLN";
+  const selectClassName =
+    "w-full appearance-none px-4 pr-10 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-white theme-e:text-[#4a3840] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-stone-300 dark:hover:border-stone-700";
 
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
@@ -70,7 +74,18 @@ export default function NewExpensePage() {
       if (!isForeign) data.exchangeRateToPLN = 1.0;
       if (data.settlementMode !== "CUSTOM") data.customOwedPLN = null;
 
-      await api.post("/api/expenses", data);
+      let uploadedReceiptUrl: string | null = null;
+      if (receiptFile) {
+        const formData = new FormData();
+        formData.append("file", receiptFile);
+        const uploadResponse = await api.postFormData("/api/expenses/receipt", formData) as { receiptUrl?: string };
+        uploadedReceiptUrl = uploadResponse.receiptUrl ?? null;
+      }
+
+      await api.post("/api/expenses", {
+        ...data,
+        receiptUrl: uploadedReceiptUrl,
+      });
       toast.success("Dodano wydatek");
       router.push("/expenses");
     } catch (err: unknown) {
@@ -139,6 +154,53 @@ export default function NewExpensePage() {
             {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Paragon (opcjonalnie)</label>
+            <input
+              ref={receiptInputRef}
+              id="receipt-file"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setReceiptFile(file);
+              }}
+              className="sr-only"
+            />
+            <div className="flex items-center gap-2 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 p-2">
+              <button
+                type="button"
+                onClick={() => receiptInputRef.current?.click()}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                {receiptFile ? "Zmień zdjęcie" : "Wybierz zdjęcie"}
+              </button>
+              <span className="flex-1 min-w-0 truncate text-sm text-stone-600 dark:text-stone-300">
+                {receiptFile ? receiptFile.name : "Nie wybrano pliku"}
+              </span>
+              {receiptFile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReceiptFile(null);
+                    if (receiptInputRef.current) {
+                      receiptInputRef.current.value = "";
+                    }
+                  }}
+                  className="p-2 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 dark:text-stone-400 dark:hover:text-white dark:hover:bg-stone-800 transition-colors"
+                  aria-label="Usuń wybrany plik"
+                  title="Usuń plik"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-stone-500 dark:text-stone-400">
+              Dozwolone formaty: JPG, PNG, WEBP, GIF (max 10 MB).
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Kwota</label>
@@ -154,16 +216,19 @@ export default function NewExpensePage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Waluta</label>
-              <select
-                {...form.register("inputCurrency")}
-                className="w-full px-4 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="PLN">PLN</option>
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
-                <option value="CZK">CZK</option>
-              </select>
+              <div className="relative">
+                <select
+                  {...form.register("inputCurrency")}
+                  className={selectClassName}
+                >
+                  <option value="PLN">PLN</option>
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                  <option value="GBP">GBP</option>
+                  <option value="CZK">CZK</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 dark:text-stone-400 theme-e:text-[#8b6d7c]" />
+              </div>
             </div>
           </div>
 
@@ -198,6 +263,13 @@ export default function NewExpensePage() {
                 <div className="ml-3">
                   <span className="block text-sm font-medium text-stone-900 dark:text-white">Bez rozliczania</span>
                   <span className="block text-sm text-stone-500">Wydatek nie wpływa na saldo końcowe, tylko śledzimy koszt.</span>
+                </div>
+              </label>
+              <label className="flex items-center p-4 border border-stone-200 dark:border-stone-800 rounded-xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/10">
+                <input type="radio" value="FULL" {...form.register("settlementMode")} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-stone-300" />
+                <div className="ml-3">
+                  <span className="block text-sm font-medium text-stone-900 dark:text-white">Druga osoba oddaje całość</span>
+                  <span className="block text-sm text-stone-500">Ktoś zapłacił za zakupy drugiej osoby, więc do oddania jest 100% kwoty.</span>
                 </div>
               </label>
               <label className="flex items-center p-4 border border-stone-200 dark:border-stone-800 rounded-xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/10">

@@ -21,18 +21,18 @@ export function Header() {
   }, [pathname]);
 
   const desktopBaseNavClass =
-    "px-4 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 theme-e:focus-visible:ring-pink-400";
+    "main-nav-link px-4 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 theme-e:focus-visible:ring-pink-400";
   const desktopDefaultInactiveClass =
     "text-stone-600 hover:bg-white hover:shadow-sm hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-700 dark:hover:text-white";
   const desktopDefaultActiveClass =
     "bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-sm theme-e:bg-pink-100 theme-e:text-fuchsia-600";
   const desktopAccentInactiveClass =
-    "text-stone-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-stone-300 dark:hover:bg-indigo-800/45 dark:hover:text-indigo-100 theme-e:hover:bg-pink-100 theme-e:hover:text-fuchsia-600";
+    "text-stone-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-stone-300 dark:hover:bg-stone-700 dark:hover:text-white theme-e:hover:bg-pink-100 theme-e:hover:text-fuchsia-600";
   const desktopAccentActiveClass =
-    "bg-indigo-100 text-indigo-700 shadow-sm dark:bg-indigo-800/60 dark:text-indigo-100 dark:hover:bg-indigo-700/70 theme-e:bg-pink-100 theme-e:text-fuchsia-600";
+    "bg-indigo-100 text-indigo-700 shadow-sm dark:bg-stone-700 dark:text-white dark:hover:bg-stone-700 theme-e:bg-pink-100 theme-e:text-fuchsia-600";
 
   const mobileMenuLinkBaseClass =
-    "w-full px-3 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 theme-e:focus-visible:ring-pink-400";
+    "main-nav-link w-full px-3 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 theme-e:focus-visible:ring-pink-400";
   const mobileMenuLinkInactiveClass =
     "text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 hover:text-stone-900 dark:hover:text-white theme-e:hover:bg-pink-100 theme-e:hover:text-fuchsia-600";
   const mobileMenuLinkActiveClass =
@@ -54,7 +54,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-stone-900/80 theme-e:bg-pink-50/70 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 theme-e:border-pink-200/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-2">
             <div className="bg-indigo-600 p-2 rounded-xl text-white">

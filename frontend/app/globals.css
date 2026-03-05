@@ -98,8 +98,8 @@ body.theme-e {
 .theme-e .hover\:bg-stone-900:hover,
 .theme-e .dark\:hover\:bg-stone-700:hover,
 .theme-e .hover\:bg-white:hover {
-  background-color: rgba(253, 224, 238, 0.8) !important; /* light pink hover */
-  color: #d946ef !important; /* text fuchsia on hover */
+  background-color: rgba(253, 224, 238, 0.52) !important; /* subtler hover than active */
+  color: #7d6572 !important; /* distinct from active fuchsia */
 }
 
 /* Override nav bar specific active state (black elements like the "Wydatki" pill on the user's screenshot) */
@@ -111,6 +111,11 @@ body.theme-e {
 .theme-e a.bg-stone-100.dark\:bg-stone-800,
 .theme-e .md\:hidden a.bg-stone-100.dark\:bg-stone-800 {
   background-color: rgba(253, 224, 238, 0.9) !important;
+  color: #d946ef !important;
+}
+
+/* Main header navigation: hover text should match +Dodaj (fuchsia) */
+.theme-e .main-nav-link:hover {
   color: #d946ef !important;
 }
 
@@ -217,8 +222,8 @@ body.theme-e {
 }
 
 .theme-e .scope-pill-button[data-active="false"]:hover {
-  background-color: rgba(253, 224, 238, 0.65) !important;
-  color: #d946ef !important;
+  background-color: rgba(253, 224, 238, 0.5) !important;
+  color: #7d6572 !important;
 }
 
 /* Keep PLN column readable on desktop in E theme,
