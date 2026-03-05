@@ -30,19 +30,15 @@ cp .env.example .env
 
 Nastepnie edytuj `.env` i ustaw minimum:
 
-- `NEXT_PUBLIC_API_BASE_URL` - publiczny URL backendu widoczny z przegladarki
+- `APP_CORS_ALLOWED_ORIGINS` - origin frontendu (np. Tailscale IP RPi)
 
 `APP_PASSWORD` jest opcjonalne. Gdy zostanie puste, logowanie haslem jest wylaczone.
 
 Przyklad dla Tailscale:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://100.x.y.z:8080
 APP_CORS_ALLOWED_ORIGINS=http://100.x.y.z:3000
 ```
-
-> `NEXT_PUBLIC_API_BASE_URL` jest wartoscia build-time dla frontendu.
-> Po zmianie tej zmiennej trzeba przebudowac frontend (`docker compose up -d --build frontend`).
 
 ### Krok 2: start
 
@@ -108,7 +104,7 @@ W katalogu `frontend/`:
 
 ```bash
 npm install
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 npm run dev
+npm run dev
 ```
 
 Frontend bedzie pod:
@@ -135,6 +131,6 @@ docker compose down
 # zatrzymanie + usuniecie wolumenow (UWAGA: usunie dane bazy)
 docker compose down -v
 
-# rebuild tylko frontendu (np. po zmianie NEXT_PUBLIC_API_BASE_URL)
+# rebuild tylko frontendu (np. po zmianie BACKEND_INTERNAL_URL)
 docker compose up -d --build frontend
 ```

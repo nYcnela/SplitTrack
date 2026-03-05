@@ -1,21 +1,8 @@
 import { getAppPassword, clearAppPassword } from "./auth";
 
-function normalizeBaseUrl(url: string): string {
-  return url.replace(/\/+$/, "");
-}
-
 export function getApiBaseUrl(): string {
-  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-
-  // For browser usage, if env still points to localhost, use current host with backend port.
-  if (
-    typeof window !== "undefined" &&
-    (!configuredBaseUrl || configuredBaseUrl.includes("localhost") || configuredBaseUrl.includes("127.0.0.1"))
-  ) {
-    return `${window.location.protocol}//${window.location.hostname}:8080`;
-  }
-
-  return normalizeBaseUrl(configuredBaseUrl || "http://localhost:8080");
+  // Keep API calls same-origin and let Next.js proxy /api and /uploads to backend.
+  return "";
 }
 
 class ApiError extends Error {
