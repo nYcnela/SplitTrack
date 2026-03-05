@@ -45,13 +45,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://100.87.218.117:8080}
     image: splittrack-frontend:latest
     container_name: splittrack-frontend
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://100.87.218.117:8080}
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
       TZ: ${TZ:-Europe/Warsaw}

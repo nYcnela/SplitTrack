@@ -2,6 +2,7 @@
 
 import type { ExpenseDTO } from "@/lib/types";
 import { formatDateString } from "@/lib/date";
+import { getApiBaseUrl } from "@/lib/api";
 
 interface Props {
   expenses: ExpenseDTO[];
@@ -9,7 +10,7 @@ interface Props {
 }
 
 export function ExpensesTable({ expenses, loading }: Props) {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+  const API_BASE_URL = getApiBaseUrl();
   const decimalFormatter = new Intl.NumberFormat("pl-PL", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

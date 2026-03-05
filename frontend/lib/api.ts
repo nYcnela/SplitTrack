@@ -1,6 +1,22 @@
 import { getAppPassword, clearAppPassword } from "./auth";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+export function getApiBaseUrl(): string {
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+  // For browser usage, if env still points to localhost, use current host with backend port.
+  if (
+    typeof window !== "undefined" &&
+    (!configuredBaseUrl || configuredBaseUrl.includes("localhost") || configuredBaseUrl.includes("127.0.0.1"))
+  ) {
+    return `${window.location.protocol}//${window.location.hostname}:8080`;
+  }
+
+  return normalizeBaseUrl(configuredBaseUrl || "http://localhost:8080");
+}
 
 class ApiError extends Error {
   status: number;
@@ -11,7 +27,7 @@ class ApiError extends Error {
 }
 
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
-  const url = `${BASE_URL}${endpoint}`;
+  const url = `${getApiBaseUrl()}${endpoint}`;
   const password = getAppPassword();
 
   const headers = new Headers(options.headers);
@@ -61,7 +77,7 @@ export const api = {
       body,
     }),
   getBlob: async (endpoint: string) => {
-    const url = `${BASE_URL}${endpoint}`;
+    const url = `${getApiBaseUrl()}${endpoint}`;
     const password = getAppPassword();
     const headers = new Headers();
     if (password) headers.set("X-App-Password", password);
