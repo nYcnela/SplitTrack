@@ -1,11 +1,16 @@
 services:
   db:
-    image: postgres:15
+    image: postgres:16
     container_name: splittrack-db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-splittrack} -d ${POSTGRES_DB:-splittrack}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     environment:
-      POSTGRES_DB: splittrack
-      POSTGRES_USER: splittrack
-      POSTGRES_PASSWORD: splittrack
+      POSTGRES_DB: ${POSTGRES_DB:-splittrack}
+      POSTGRES_USER: ${POSTGRES_USER:-splittrack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-splittrack}
     volumes:
       - splittrack_db:/var/lib/postgresql/data
     command: ["postgres", "-c", "shared_buffers=128MB"]
@@ -14,18 +19,46 @@ services:
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile
+    image: splittrack-backend:latest
     container_name: splittrack-backend
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/splittrack
-      SPRING_DATASOURCE_USERNAME: splittrack
-      SPRING_DATASOURCE_PASSWORD: splittrack
-      APP_PASSWORD: testhaslo
-      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-splittrack}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-splittrack}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-splittrack}
+      APP_PASSWORD: ${APP_PASSWORD:-testhaslo}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-*}
+      APP_UPLOADS_DIR: /app/uploads
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms128m -Xmx384m}
+      TZ: ${TZ:-Europe/Warsaw}
+    volumes:
+      - splittrack_uploads:/app/uploads
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+    image: splittrack-frontend:latest
+    container_name: splittrack-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      TZ: ${TZ:-Europe/Warsaw}
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
   splittrack_db:
+  splittrack_uploads:

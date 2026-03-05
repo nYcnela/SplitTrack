@@ -1,0 +1,7 @@
+.git
+.gitignore
+target
+.m2
+uploads
+*.log
+.DS_Store
