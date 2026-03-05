@@ -36,6 +36,9 @@ public class AppPasswordFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (!isPasswordEnabled()) {
+            return true;
+        }
         String path = request.getRequestURI();
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
@@ -49,6 +52,11 @@ public class AppPasswordFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
         throws ServletException, IOException {
+        if (!isPasswordEnabled()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String provided = request.getHeader(HEADER_NAME);
         if (provided == null || !provided.equals(appProperties.getPassword())) {
             addCorsHeaders(request, response);
@@ -59,6 +67,11 @@ public class AppPasswordFilter extends OncePerRequestFilter {
             return;
         }
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isPasswordEnabled() {
+        String configuredPassword = appProperties.getPassword();
+        return configuredPassword != null && !configuredPassword.isBlank();
     }
 
     private void addCorsHeaders(HttpServletRequest request, HttpServletResponse response) {

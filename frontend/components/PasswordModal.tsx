@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAppPassword, setAppPassword } from "@/lib/auth";
+import { setAppPassword } from "@/lib/auth";
 import { Lock } from "lucide-react";
 
 export function PasswordModal() {
@@ -9,13 +9,7 @@ export function PasswordModal() {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    // Sprawdź czy hasło jest ustawione na start
-    const current = getAppPassword();
-    if (!current) {
-      setOpen(true);
-    }
-    
-    // Listen for unauthorized events to re-open modal
+    // Open modal only when backend explicitly returns 401.
     const handleUnauthorized = () => {
       setOpen(true);
     };
@@ -44,7 +38,7 @@ export function PasswordModal() {
           <h2 className="text-xl font-bold">Wymagane hasło</h2>
         </div>
         <p className="mb-6 text-sm text-stone-500 dark:text-stone-400">
-          Podaj hasło aplikacji, aby uzyskać dostęp. Jeśli go nie znasz, zapytaj administratora (domyślnie &quot;testhaslo&quot;).
+          Ten serwer ma włączoną ochronę hasłem. Podaj hasło aplikacji, aby kontynuować.
         </p>
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input

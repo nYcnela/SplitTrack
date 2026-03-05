@@ -7,8 +7,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "app")
 public class AppProperties {
-    @NotBlank
-    private String password = "testhaslo";
+    private String password = "";
 
     private Cors cors = new Cors();
 

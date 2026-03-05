@@ -30,8 +30,9 @@ cp .env.example .env
 
 Nastepnie edytuj `.env` i ustaw minimum:
 
-- `APP_PASSWORD` - haslo aplikacji (naglowek `X-App-Password`)
 - `NEXT_PUBLIC_API_BASE_URL` - publiczny URL backendu widoczny z przegladarki
+
+`APP_PASSWORD` jest opcjonalne. Gdy zostanie puste, logowanie haslem jest wylaczone.
 
 Przyklad dla Tailscale:
 
@@ -92,7 +93,6 @@ W katalogu `backend/`:
 export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/splittrack
 export SPRING_DATASOURCE_USERNAME=postgres
 export SPRING_DATASOURCE_PASSWORD=admin
-export APP_PASSWORD=testhaslo
 
 mvn -DskipTests spring-boot:run
 ```

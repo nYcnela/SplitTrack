@@ -16,7 +16,7 @@ spring:
     locations: classpath:db/migration
 
 app:
-  password: ${APP_PASSWORD:testhaslo}
+  password: ${APP_PASSWORD:}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:*}
   default-currency: PLN
