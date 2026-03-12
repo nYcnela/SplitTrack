@@ -2,10 +2,16 @@ server:
   port: 8080
 
 spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/splittrack}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:admin}
+  servlet:
+    multipart:
+      max-file-size: ${APP_MAX_UPLOAD_SIZE:10MB}
+      max-request-size: ${APP_MAX_UPLOAD_SIZE:10MB}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -21,3 +27,20 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:*}
   default-currency: PLN
   uploads-dir: ${APP_UPLOADS_DIR:uploads}
+  max-upload-size: ${APP_MAX_UPLOAD_SIZE:10MB}
+  ocr:
+    enabled: ${APP_OCR_ENABLED:true}
+    provider: ${APP_OCR_PROVIDER:tesseract}
+    command: ${APP_OCR_COMMAND:tesseract}
+    language: ${APP_OCR_LANGUAGE:pol+eng}
+    page-segmentation-mode: ${APP_OCR_PAGE_SEGMENTATION_MODE:6}
+    timeout-seconds: ${APP_OCR_TIMEOUT_SECONDS:45}
+    max-items: ${APP_OCR_MAX_ITEMS:40}
+    tabscanner:
+      api-base-url: ${APP_OCR_TABSCANNER_API_BASE_URL:https://api.tabscanner.com}
+      api-key: ${APP_OCR_TABSCANNER_API_KEY:}
+      region: ${APP_OCR_TABSCANNER_REGION:pl}
+      document-type: ${APP_OCR_TABSCANNER_DOCUMENT_TYPE:receipt}
+      default-date-parsing: ${APP_OCR_TABSCANNER_DEFAULT_DATE_PARSING:d/m}
+      poll-delay-millis: ${APP_OCR_TABSCANNER_POLL_DELAY_MILLIS:1000}
+      max-poll-attempts: ${APP_OCR_TABSCANNER_MAX_POLL_ATTEMPTS:12}

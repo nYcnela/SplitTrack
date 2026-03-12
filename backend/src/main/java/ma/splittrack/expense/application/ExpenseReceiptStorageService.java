@@ -15,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ExpenseReceiptStorageService {
-    private static final long MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
         "image/jpeg",
         "image/png",
@@ -29,18 +28,23 @@ public class ExpenseReceiptStorageService {
         this.appProperties = appProperties;
     }
 
-    public String store(MultipartFile file) {
+    public void validateReceiptImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Plik paragonu jest pusty");
         }
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new IllegalArgumentException("Zdjęcie paragonu jest za duże (max 10 MB)");
+        long maxFileSizeBytes = appProperties.getMaxUploadSize().toBytes();
+        if (file.getSize() > maxFileSizeBytes) {
+            throw new IllegalArgumentException("Zdjęcie paragonu jest za duże (max " + appProperties.getMaxUploadSize() + ")");
         }
 
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
             throw new IllegalArgumentException("Dozwolone formaty paragonu: JPG, PNG, WEBP, GIF");
         }
+    }
+
+    public String store(MultipartFile file) {
+        validateReceiptImage(file);
 
         String safeOriginalName = sanitizeFilename(file.getOriginalFilename());
         String generatedName = UUID.randomUUID() + "_" + safeOriginalName;

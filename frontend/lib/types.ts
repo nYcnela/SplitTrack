@@ -62,3 +62,18 @@ export interface SpendingChartResponse {
   labels: Person[];
   values: number[];
 }
+
+export interface ReceiptOcrItem {
+  name: string;
+  amount: number;
+  rawLine: string;
+}
+
+export interface ReceiptOcrResponse {
+  items: ReceiptOcrItem[];
+  rawLines: string[];
+  provider: string;
+  establishment?: string | null;
+  purchaseDate?: string | null;
+  creditsRemaining?: number | null;
+}

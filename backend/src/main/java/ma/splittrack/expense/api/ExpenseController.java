@@ -9,8 +9,10 @@ import ma.splittrack.common.domain.Scope;
 import ma.splittrack.common.web.PageResponse;
 import ma.splittrack.expense.api.dto.ExpenseCreateRequest;
 import ma.splittrack.expense.api.dto.ExpenseDTO;
+import ma.splittrack.expense.api.dto.ReceiptOcrResponse;
 import ma.splittrack.expense.api.dto.ReceiptUploadResponse;
 import ma.splittrack.expense.application.ExpenseReceiptStorageService;
+import ma.splittrack.expense.application.ReceiptOcrService;
 import ma.splittrack.expense.application.ExpenseService;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
@@ -32,10 +34,16 @@ import org.springframework.web.multipart.MultipartFile;
 public class ExpenseController {
     private final ExpenseService expenseService;
     private final ExpenseReceiptStorageService receiptStorageService;
+    private final ReceiptOcrService receiptOcrService;
 
-    public ExpenseController(ExpenseService expenseService, ExpenseReceiptStorageService receiptStorageService) {
+    public ExpenseController(
+        ExpenseService expenseService,
+        ExpenseReceiptStorageService receiptStorageService,
+        ReceiptOcrService receiptOcrService
+    ) {
         this.expenseService = expenseService;
         this.receiptStorageService = receiptStorageService;
+        this.receiptOcrService = receiptOcrService;
     }
 
     @PostMapping("/expenses")
@@ -49,6 +57,12 @@ public class ExpenseController {
     public ReceiptUploadResponse uploadReceipt(@RequestPart("file") MultipartFile file) {
         String receiptUrl = receiptStorageService.store(file);
         return new ReceiptUploadResponse(receiptUrl);
+    }
+
+    @PostMapping(value = "/expenses/receipt/ocr", consumes = "multipart/form-data")
+    @Operation(summary = "Recognize receipt line items with OCR")
+    public ReceiptOcrResponse recognizeReceipt(@RequestPart("file") MultipartFile file) {
+        return receiptOcrService.recognize(file);
     }
 
     @GetMapping("/expenses")
