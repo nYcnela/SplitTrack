@@ -11,6 +11,13 @@ export function Header() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileNavItems = [
+    { href: "/", label: "Dashboard" },
+    { href: "/expenses", label: "Wydatki" },
+    { href: "/expenses/new", label: "+ Dodaj" },
+    { href: "/settlements", label: "Rozliczenia" },
+    { href: "/export", label: "Eksport" },
+  ];
 
   useEffect(() => {
     setMounted(true);
@@ -56,14 +63,18 @@ export function Header() {
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-stone-900/80 theme-e:bg-pink-50/70 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 theme-e:border-pink-200/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 theme-e:focus-visible:ring-pink-400"
+            aria-label="Przejdź do dashboardu"
+          >
             <div className="bg-indigo-600 p-2 rounded-xl text-white">
               <Wallet className="w-5 h-5" />
             </div>
-            <Link href="/" className="font-bold text-xl tracking-tight hidden sm:block text-indigo-950 dark:text-white">
+            <span className="font-bold text-xl tracking-tight hidden sm:block text-indigo-950 dark:text-white">
               Na Pół
-            </Link>
-          </div>
+            </span>
+          </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex gap-1 items-center bg-stone-100 dark:bg-stone-800/50 p-1 rounded-xl border border-stone-200/50 dark:border-stone-800">
@@ -117,20 +128,41 @@ export function Header() {
         </div>
       </div>
 
-      {mobileMenuOpen && (
-        <div
-          id="mobile-nav-menu"
-          className="md:hidden border-t border-stone-200/70 dark:border-stone-800/80 theme-e:border-pink-200/60 px-4 pb-3"
-        >
-          <nav className="mt-3 flex flex-col gap-2">
-            <Link href="/" onClick={closeMobileMenu} className={getMobileMenuNavClass("/")}>Dashboard</Link>
-            <Link href="/expenses" onClick={closeMobileMenu} className={getMobileMenuNavClass("/expenses")}>Wydatki</Link>
-            <Link href="/expenses/new" onClick={closeMobileMenu} className={getMobileMenuNavClass("/expenses/new")}>+ Dodaj</Link>
-            <Link href="/settlements" onClick={closeMobileMenu} className={getMobileMenuNavClass("/settlements")}>Rozliczenia</Link>
-            <Link href="/export" onClick={closeMobileMenu} className={getMobileMenuNavClass("/export")}>Eksport</Link>
-          </nav>
+      <div
+        id="mobile-nav-menu"
+        aria-hidden={!mobileMenuOpen}
+        className={`md:hidden grid overflow-hidden transition-all duration-300 ease-out ${
+          mobileMenuOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div className="min-h-0">
+          <div
+            className={`border-t border-stone-200/70 dark:border-stone-800/80 theme-e:border-pink-200/60 px-4 transition-all duration-300 ease-out ${
+              mobileMenuOpen
+                ? "pointer-events-auto pb-3 pt-2 translate-y-0"
+                : "pointer-events-none pb-0 pt-0 -translate-y-3"
+            }`}
+          >
+            <nav className="mt-3 flex flex-col gap-2">
+              {mobileNavItems.map((item, index) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMobileMenu}
+                  className={`${getMobileMenuNavClass(item.href)} transform-gpu transition-all duration-300 ease-out ${
+                    mobileMenuOpen ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+                  }`}
+                  style={{
+                    transitionDelay: mobileMenuOpen ? `${index * 35}ms` : "0ms",
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </div>
-      )}
+      </div>
     </header>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { SummaryResponse } from "@/lib/types";
-import { ArrowRightLeft, TrendingDown, TrendingUp, CheckCircle2 } from "lucide-react";
+import { ArrowRightLeft, TrendingUp, CheckCircle2 } from "lucide-react";
 
 interface Props {
   summary: SummaryResponse | null;
@@ -91,7 +91,7 @@ export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props
           
           <div className="flex justify-between items-center p-3 bg-stone-50 dark:bg-stone-950 rounded-xl border border-stone-100 dark:border-stone-800/50">
             <div className="flex items-center gap-2">
-              <TrendingDown className="w-4 h-4 text-purple-500" />
+              <TrendingUp className="w-4 h-4 text-purple-500" />
               <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Wydatki Emilki</span>
             </div>
             <span className="font-bold text-stone-900 dark:text-white">{totalsSpent?.EMILKA?.toFixed(2) || "0.00"} zł</span>
