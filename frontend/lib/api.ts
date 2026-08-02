@@ -11,6 +11,15 @@ export function getApiBaseUrl(): string {
     if (localHosts.has(window.location.hostname)) {
       return `http://${window.location.hostname === "::1" ? "[::1]" : window.location.hostname}:8080`;
     }
+
+    // Next.js proxies normal API calls well, but multipart uploads can be
+    // interrupted when the app is reached over a Tailscale address.  The API
+    // is exposed on the same Tailscale host and explicitly allows CORS, so
+    // connect to it directly for Tailnet clients.
+    const host = window.location.hostname;
+    if (host === "raspberrypi" || host.startsWith("100.") || host.endsWith(".ts.net")) {
+      return `http://${host}:8080`;
+    }
   }
 
   // Fall back to same-origin and let Next.js proxy /api and /uploads to backend.
@@ -26,7 +35,8 @@ class ApiError extends Error {
 }
 
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
-  const url = `${getApiBaseUrl()}${endpoint}`;
+  const apiBaseUrl = getApiBaseUrl();
+  const url = `${apiBaseUrl}${endpoint}`;
   const password = getAppPassword();
 
   const headers = new Headers(options.headers);
@@ -38,10 +48,27 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
     headers.set("X-App-Password", password);
   }
 
-  const response = await fetch(url, {
+  const requestOptions = {
     ...options,
     headers,
-  });
+  };
+
+  let response: Response;
+  try {
+    response = await fetch(url, requestOptions);
+  } catch (error) {
+    // Some Tailnet ACLs expose the frontend port but not the backend port.
+    // In that case retry through Next.js' same-origin proxy.
+    if (apiBaseUrl) {
+      try {
+        response = await fetch(endpoint, requestOptions);
+      } catch {
+        throw new ApiError(`Nie można połączyć się z serwerem analizy (${url})`, 0);
+      }
+    } else {
+      throw error;
+    }
+  }
 
   if (response.status === 401) {
     clearAppPassword(); // optionally clear it

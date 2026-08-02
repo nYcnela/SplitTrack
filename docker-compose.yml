@@ -46,6 +46,9 @@ services:
       APP_OCR_TABSCANNER_DEFAULT_DATE_PARSING: ${APP_OCR_TABSCANNER_DEFAULT_DATE_PARSING:-d/m}
       APP_OCR_TABSCANNER_POLL_DELAY_MILLIS: ${APP_OCR_TABSCANNER_POLL_DELAY_MILLIS:-1000}
       APP_OCR_TABSCANNER_MAX_POLL_ATTEMPTS: ${APP_OCR_TABSCANNER_MAX_POLL_ATTEMPTS:-12}
+      APP_RECEIPT_ANALYZER_BASE_URL: ${APP_RECEIPT_ANALYZER_BASE_URL:-http://receipt-insights:8000}
+      APP_RECEIPT_ANALYZER_ANALYZE_PATH: ${APP_RECEIPT_ANALYZER_ANALYZE_PATH:-/receipt/analyze}
+      APP_RECEIPT_ANALYZER_LLM_TYPE: ${APP_RECEIPT_ANALYZER_LLM_TYPE:-light}
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms128m -Xmx384m}
       TZ: ${TZ:-Europe/Warsaw}
     volumes:
@@ -53,6 +56,26 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      receipt-insights:
+        condition: service_healthy
+    restart: unless-stopped
+
+  receipt-insights:
+    build:
+      context: ../receipt-insights
+      dockerfile: Dockerfile
+    image: receipt-insights:splittrack-api
+    container_name: receipt-insights-splittrack-api
+    env_file:
+      - ../receipt-insights/.env
+    ports:
+      - "${RECEIPT_INSIGHTS_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   frontend:
