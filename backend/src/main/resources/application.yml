@@ -10,8 +10,8 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:admin}
   servlet:
     multipart:
-      max-file-size: ${APP_MAX_UPLOAD_SIZE:10MB}
-      max-request-size: ${APP_MAX_UPLOAD_SIZE:10MB}
+      max-file-size: ${APP_MAX_UPLOAD_SIZE:30MB}
+      max-request-size: ${APP_MAX_UPLOAD_SIZE:30MB}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -27,7 +27,7 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:*}
   default-currency: PLN
   uploads-dir: ${APP_UPLOADS_DIR:uploads}
-  max-upload-size: ${APP_MAX_UPLOAD_SIZE:10MB}
+  max-upload-size: ${APP_MAX_UPLOAD_SIZE:30MB}
   ocr:
     enabled: ${APP_OCR_ENABLED:true}
     timeout-seconds: ${APP_OCR_TIMEOUT_SECONDS:180}

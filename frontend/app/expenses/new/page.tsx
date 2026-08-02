@@ -73,6 +73,9 @@ const analyzerModeLabels: Record<ReceiptAnalyzerMode, string> = {
   heavy: "Heavy",
 };
 
+const MAX_RECEIPT_IMAGE_SIDE = 2_000;
+const CLIENT_OPTIMIZATION_THRESHOLD_BYTES = 1_000_000;
+
 export default function NewExpensePage() {
   const router = useRouter();
   const receiptInputRef = useRef<HTMLInputElement | null>(null);
@@ -144,10 +147,6 @@ export default function NewExpensePage() {
   }
 
   async function runReceiptOcr(files: File[]) {
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
-    formData.append("llmType", receiptAnalyzerMode);
-
     setOcrLoading(true);
     setOcrRequested(true);
     setOcrError(null);
@@ -158,6 +157,11 @@ export default function NewExpensePage() {
     setExpandedOcrItemIds([]);
 
     try {
+      const optimizedFiles = await optimizeReceiptFiles(files);
+      const formData = new FormData();
+      optimizedFiles.forEach((file) => formData.append("files", file));
+      formData.append("llmType", receiptAnalyzerMode);
+
       const response = await api.postFormData("/api/expenses/receipt/ocr", formData) as ReceiptOcrResponse;
       const items = (response.items ?? []).map(toEditableReceiptItem);
       setOcrItems(items);
@@ -280,7 +284,8 @@ export default function NewExpensePage() {
     if (receiptFiles.length === 0) {
       return null;
     }
-    const uploadedUrls = await Promise.all(receiptFiles.map(async (file) => {
+    const optimizedFiles = await optimizeReceiptFiles(receiptFiles);
+    const uploadedUrls = await Promise.all(optimizedFiles.map(async (file) => {
       const formData = new FormData();
       formData.append("file", file);
       const uploadResponse = await api.postFormData("/api/expenses/receipt", formData) as { receiptUrl?: string };
@@ -895,6 +900,57 @@ function SettlementOption({
       </div>
     </label>
   );
+}
+
+async function optimizeReceiptFiles(files: File[]): Promise<File[]> {
+  return Promise.all(files.map(optimizeReceiptFile));
+}
+
+async function optimizeReceiptFile(file: File): Promise<File> {
+  if (
+    file.size <= CLIENT_OPTIMIZATION_THRESHOLD_BYTES
+    || !file.type.startsWith("image/")
+    || typeof createImageBitmap !== "function"
+  ) {
+    return file;
+  }
+
+  let bitmap: ImageBitmap | null = null;
+  try {
+    bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_RECEIPT_IMAGE_SIDE / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return file;
+    }
+
+    context.fillStyle = "white";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(bitmap, 0, 0, width, height);
+
+    const compressed = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", 0.85);
+    });
+    if (!compressed || compressed.size >= file.size) {
+      return file;
+    }
+
+    const baseName = file.name.replace(/\.[^/.]+$/, "") || "paragon";
+    return new File([compressed], `${baseName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: file.lastModified,
+    });
+  } catch {
+    // Keep the original file if the browser cannot decode its format.
+    return file;
+  } finally {
+    bitmap?.close();
+  }
 }
 
 function AnalyzerModeSwitch({

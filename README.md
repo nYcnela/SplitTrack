@@ -125,7 +125,7 @@ export APP_OCR_PROVIDER=tesseract
 export APP_OCR_COMMAND=tesseract
 export APP_OCR_LANGUAGE=pol+eng
 export APP_OCR_TABSCANNER_API_KEY=
-export APP_MAX_UPLOAD_SIZE=10MB
+export APP_MAX_UPLOAD_SIZE=30MB
 
 mvn -DskipTests spring-boot:run
 ```

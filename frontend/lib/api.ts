@@ -12,17 +12,12 @@ export function getApiBaseUrl(): string {
       return `http://${window.location.hostname === "::1" ? "[::1]" : window.location.hostname}:8080`;
     }
 
-    // Next.js proxies normal API calls well, but multipart uploads can be
-    // interrupted when the app is reached over a Tailscale address.  The API
-    // is exposed on the same Tailscale host and explicitly allows CORS, so
-    // connect to it directly for Tailnet clients.
-    const host = window.location.hostname;
-    if (host === "raspberrypi" || host.startsWith("100.") || host.endsWith(".ts.net")) {
-      return `http://${host}:8080`;
-    }
   }
 
-  // Fall back to same-origin and let Next.js proxy /api and /uploads to backend.
+  // Keep Tailnet clients on the same origin too. Direct browser requests to
+  // port 8080 can complete at the backend but still be dropped by mobile
+  // browsers on a Tailnet connection, especially after multipart uploads.
+  // The Next.js rewrite forwards this server-to-server inside Docker.
   return "";
 }
 
