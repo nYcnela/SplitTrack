@@ -67,6 +67,12 @@ export interface ReceiptOcrItem {
   name: string;
   amount: number;
   rawLine: string;
+  quantity?: number | null;
+  weight?: number | null;
+  price?: number | null;
+  discount?: number | null;
+  totalPrice?: number | null;
+  priceWithDiscount?: number | null;
 }
 
 export interface ReceiptOcrResponse {
@@ -76,4 +82,6 @@ export interface ReceiptOcrResponse {
   establishment?: string | null;
   purchaseDate?: string | null;
   creditsRemaining?: number | null;
+  total?: number | null;
+  currency?: string | null;
 }

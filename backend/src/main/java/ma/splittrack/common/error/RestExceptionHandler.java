@@ -52,4 +52,10 @@ public class RestExceptionHandler {
         ApiError body = new ApiError("BadRequest", "Nie udało się przetworzyć uploadu pliku. Sprawdź rozmiar i format zdjęcia.", null);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
+        ApiError body = new ApiError("InternalError", ex.getMessage(), null);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
 }

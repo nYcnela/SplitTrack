@@ -30,17 +30,9 @@ app:
   max-upload-size: ${APP_MAX_UPLOAD_SIZE:10MB}
   ocr:
     enabled: ${APP_OCR_ENABLED:true}
-    provider: ${APP_OCR_PROVIDER:tesseract}
-    command: ${APP_OCR_COMMAND:tesseract}
-    language: ${APP_OCR_LANGUAGE:pol+eng}
-    page-segmentation-mode: ${APP_OCR_PAGE_SEGMENTATION_MODE:6}
-    timeout-seconds: ${APP_OCR_TIMEOUT_SECONDS:45}
-    max-items: ${APP_OCR_MAX_ITEMS:40}
-    tabscanner:
-      api-base-url: ${APP_OCR_TABSCANNER_API_BASE_URL:https://api.tabscanner.com}
-      api-key: ${APP_OCR_TABSCANNER_API_KEY:}
-      region: ${APP_OCR_TABSCANNER_REGION:pl}
-      document-type: ${APP_OCR_TABSCANNER_DOCUMENT_TYPE:receipt}
-      default-date-parsing: ${APP_OCR_TABSCANNER_DEFAULT_DATE_PARSING:d/m}
-      poll-delay-millis: ${APP_OCR_TABSCANNER_POLL_DELAY_MILLIS:1000}
-      max-poll-attempts: ${APP_OCR_TABSCANNER_MAX_POLL_ATTEMPTS:12}
+    timeout-seconds: ${APP_OCR_TIMEOUT_SECONDS:180}
+    max-items: ${APP_OCR_MAX_ITEMS:200}
+    receipt-analyzer:
+      base-url: ${APP_RECEIPT_ANALYZER_BASE_URL:http://localhost:8000}
+      analyze-path: ${APP_RECEIPT_ANALYZER_ANALYZE_PATH:/receipt/analyze}
+      llm-type: ${APP_RECEIPT_ANALYZER_LLM_TYPE:light}

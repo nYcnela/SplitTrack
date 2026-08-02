@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 import ma.splittrack.common.domain.Scope;
 import ma.splittrack.common.web.PageResponse;
 import ma.splittrack.expense.api.dto.ExpenseCreateRequest;
@@ -61,8 +62,11 @@ public class ExpenseController {
 
     @PostMapping(value = "/expenses/receipt/ocr", consumes = "multipart/form-data")
     @Operation(summary = "Recognize receipt line items with OCR")
-    public ReceiptOcrResponse recognizeReceipt(@RequestPart("file") MultipartFile file) {
-        return receiptOcrService.recognize(file);
+    public ReceiptOcrResponse recognizeReceipt(
+        @RequestPart("files") List<MultipartFile> files,
+        @RequestParam(name = "llmType", required = false) String llmType
+    ) {
+        return receiptOcrService.recognize(files, llmType);
     }
 
     @GetMapping("/expenses")

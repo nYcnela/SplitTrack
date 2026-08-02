@@ -14,4 +14,10 @@ public class ReceiptOcrItemResponse {
     private String name;
     private BigDecimal amount;
     private String rawLine;
+    private BigDecimal quantity;
+    private BigDecimal weight;
+    private BigDecimal price;
+    private BigDecimal discount;
+    private BigDecimal totalPrice;
+    private BigDecimal priceWithDiscount;
 }

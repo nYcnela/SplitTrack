@@ -87,22 +87,11 @@ public class AppProperties {
     public static class Ocr {
         private boolean enabled = true;
 
-        @NotBlank
-        private String provider = "tesseract";
-
-        @NotBlank
-        private String command = "tesseract";
-
-        @NotBlank
-        private String language = "pol+eng";
-
-        private int pageSegmentationMode = 6;
-
-        private int timeoutSeconds = 45;
+        private int timeoutSeconds = 180;
 
         private int maxItems = 40;
 
-        private Tabscanner tabscanner = new Tabscanner();
+        private ReceiptAnalyzer receiptAnalyzer = new ReceiptAnalyzer();
 
         public boolean isEnabled() {
             return enabled;
@@ -110,30 +99,6 @@ public class AppProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
-        }
-
-        public String getCommand() {
-            return command;
-        }
-
-        public void setCommand(String command) {
-            this.command = command;
-        }
-
-        public String getLanguage() {
-            return language;
-        }
-
-        public void setLanguage(String language) {
-            this.language = language;
-        }
-
-        public int getPageSegmentationMode() {
-            return pageSegmentationMode;
-        }
-
-        public void setPageSegmentationMode(int pageSegmentationMode) {
-            this.pageSegmentationMode = pageSegmentationMode;
         }
 
         public int getTimeoutSeconds() {
@@ -152,96 +117,47 @@ public class AppProperties {
             this.maxItems = maxItems;
         }
 
-        public String getProvider() {
-            return provider;
+        public ReceiptAnalyzer getReceiptAnalyzer() {
+            return receiptAnalyzer;
         }
 
-        public void setProvider(String provider) {
-            this.provider = provider;
-        }
-
-        public Tabscanner getTabscanner() {
-            return tabscanner;
-        }
-
-        public void setTabscanner(Tabscanner tabscanner) {
-            this.tabscanner = tabscanner;
+        public void setReceiptAnalyzer(ReceiptAnalyzer receiptAnalyzer) {
+            this.receiptAnalyzer = receiptAnalyzer;
         }
     }
 
-    public static class Tabscanner {
+    public static class ReceiptAnalyzer {
         @NotBlank
-        private String apiBaseUrl = "https://api.tabscanner.com";
-
-        private String apiKey = "";
+        private String baseUrl = "http://localhost:8000";
 
         @NotBlank
-        private String region = "pl";
+        private String analyzePath = "/receipt/analyze";
 
         @NotBlank
-        private String documentType = "receipt";
+        private String llmType = "light";
 
-        @NotBlank
-        private String defaultDateParsing = "d/m";
-
-        private int pollDelayMillis = 1000;
-
-        private int maxPollAttempts = 12;
-
-        public String getApiBaseUrl() {
-            return apiBaseUrl;
+        public String getBaseUrl() {
+            return baseUrl;
         }
 
-        public void setApiBaseUrl(String apiBaseUrl) {
-            this.apiBaseUrl = apiBaseUrl;
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
         }
 
-        public String getApiKey() {
-            return apiKey;
+        public String getAnalyzePath() {
+            return analyzePath;
         }
 
-        public void setApiKey(String apiKey) {
-            this.apiKey = apiKey;
+        public void setAnalyzePath(String analyzePath) {
+            this.analyzePath = analyzePath;
         }
 
-        public String getRegion() {
-            return region;
+        public String getLlmType() {
+            return llmType;
         }
 
-        public void setRegion(String region) {
-            this.region = region;
-        }
-
-        public String getDocumentType() {
-            return documentType;
-        }
-
-        public void setDocumentType(String documentType) {
-            this.documentType = documentType;
-        }
-
-        public String getDefaultDateParsing() {
-            return defaultDateParsing;
-        }
-
-        public void setDefaultDateParsing(String defaultDateParsing) {
-            this.defaultDateParsing = defaultDateParsing;
-        }
-
-        public int getPollDelayMillis() {
-            return pollDelayMillis;
-        }
-
-        public void setPollDelayMillis(int pollDelayMillis) {
-            this.pollDelayMillis = pollDelayMillis;
-        }
-
-        public int getMaxPollAttempts() {
-            return maxPollAttempts;
-        }
-
-        public void setMaxPollAttempts(int maxPollAttempts) {
-            this.maxPollAttempts = maxPollAttempts;
+        public void setLlmType(String llmType) {
+            this.llmType = llmType;
         }
     }
 }

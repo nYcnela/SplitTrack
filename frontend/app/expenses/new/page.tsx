@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { api } from "@/lib/api";
-import type { ReceiptOcrItem, ReceiptOcrResponse } from "@/lib/types";
+import type { Person, ReceiptOcrItem, ReceiptOcrResponse, SettlementMode } from "@/lib/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, ChevronDown, Loader2, Upload, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Loader2, Pencil, Split, Upload, User, X } from "lucide-react";
 import Link from "next/link";
 
 const expenseSchema = z.object({
@@ -39,39 +39,56 @@ const expenseSchema = z.object({
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
+type AssignmentTarget = "HALF" | Person;
+type ScannerMode = "STANDARD" | AssignmentTarget;
+type ReceiptAnalyzerMode = "light" | "heavy";
 
-const OCR_SKIP_FRAGMENTS = [
-  "suma",
-  "suma ptu",
-  "podsuma",
-  "subtotal",
-  "ptu",
-  "vat",
-  "tax",
-  "sprzedaz opodatkowana",
-  "paragon",
-  "fiskalny",
-  "niefiskalny",
-  "karta",
-  "gotowka",
-  "blik",
-  "rabat",
-  "opust",
-  "terminal",
-  "rozliczenie",
-];
+interface EditableReceiptItem {
+  id: string;
+  name: string;
+  amount: number;
+  rawLine: string;
+  quantity?: number | null;
+  weight?: number | null;
+  price?: number | null;
+  discount?: number | null;
+  totalPrice: number;
+  priceWithDiscount: number;
+}
+
+const assignmentLabels: Record<AssignmentTarget, string> = {
+  HALF: "Na pół",
+  MACIEK: "Maciek",
+  EMILKA: "Emilka",
+};
+
+const assignmentTextClasses: Record<AssignmentTarget, string> = {
+  HALF: "text-emerald-600 dark:text-emerald-300",
+  MACIEK: "text-indigo-600 dark:text-indigo-300",
+  EMILKA: "text-pink-600 dark:text-pink-300",
+};
+
+const analyzerModeLabels: Record<ReceiptAnalyzerMode, string> = {
+  light: "Light",
+  heavy: "Heavy",
+};
 
 export default function NewExpensePage() {
   const router = useRouter();
+  const receiptInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
-  const [ocrItems, setOcrItems] = useState<ReceiptOcrItem[]>([]);
+  const [ocrItems, setOcrItems] = useState<EditableReceiptItem[]>([]);
   const [ocrRawLines, setOcrRawLines] = useState<string[]>([]);
   const [ocrRequested, setOcrRequested] = useState(false);
-  const [selectedOcrItemKeys, setSelectedOcrItemKeys] = useState<string[]>([]);
-  const receiptInputRef = useRef<HTMLInputElement | null>(null);
+  const [receiptMeta, setReceiptMeta] = useState<{ storeName?: string | null; total?: number | null; currency?: string | null }>({});
+  const [selectedOcrItemIds, setSelectedOcrItemIds] = useState<string[]>([]);
+  const [scannerMode, setScannerMode] = useState<ScannerMode>("STANDARD");
+  const [receiptAnalyzerMode, setReceiptAnalyzerMode] = useState<ReceiptAnalyzerMode>("light");
+  const [assignments, setAssignments] = useState<Record<string, AssignmentTarget>>({});
+  const [expandedOcrItemIds, setExpandedOcrItemIds] = useState<string[]>([]);
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -90,73 +107,164 @@ export default function NewExpensePage() {
   const { watch, handleSubmit, formState: { errors } } = form;
   const currency = watch("inputCurrency");
   const settlementMode = watch("settlementMode");
-
   const isForeign = currency !== "PLN";
+
+  const selectedOcrItemSet = useMemo(() => new Set(selectedOcrItemIds), [selectedOcrItemIds]);
+  const selectedOcrItems = ocrItems.filter((item) => selectedOcrItemSet.has(item.id));
+  const selectedOcrAmount = sumItems(selectedOcrItems);
+  const hasReceiptFiles = receiptFiles.length > 0;
+  const receiptFilesLabel = hasReceiptFiles
+    ? receiptFiles.length === 1
+      ? receiptFiles[0].name
+      : `${receiptFiles.length} zdjęcia`
+    : "Nie wybrano pliku";
+  const assignmentGroups = useMemo(() => {
+    return {
+      HALF: ocrItems.filter((item) => assignments[item.id] === "HALF"),
+      MACIEK: ocrItems.filter((item) => assignments[item.id] === "MACIEK"),
+      EMILKA: ocrItems.filter((item) => assignments[item.id] === "EMILKA"),
+    };
+  }, [assignments, ocrItems]);
+  const assignedCount = Object.keys(assignments).length;
+  const hasRecognizedReceiptItems = ocrRequested && !ocrLoading && !ocrError && ocrItems.length > 0;
+
   const selectClassName =
     "w-full appearance-none px-4 pr-10 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-white theme-e:text-[#4a3840] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-stone-300 dark:hover:border-stone-700";
-  const visibleOcrItems = ocrItems.filter((item) => !shouldHideOcrItem(item));
-  const selectedOcrItemKeySet = new Set(selectedOcrItemKeys);
-  const selectedOcrItems = visibleOcrItems.filter((item, index) => selectedOcrItemKeySet.has(getOcrItemKey(item, index)));
-  const selectedOcrAmount = selectedOcrItems.reduce((sum, item) => sum + item.amount, 0);
-
-  function getOcrItemKey(item: ReceiptOcrItem, index: number) {
-    return `${index}:${item.name}:${item.amount}`;
-  }
-
-  function normalizeOcrLabel(value: string) {
-    return value
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^A-Za-z0-9%]+/g, " ")
-      .trim()
-      .replace(/\s+/g, " ")
-      .toLowerCase();
-  }
-
-  function shouldHideOcrItem(item: ReceiptOcrItem) {
-    const normalized = normalizeOcrLabel(item.name);
-    return OCR_SKIP_FRAGMENTS.some((fragment) => normalized.includes(fragment));
-  }
 
   function resetOcrState() {
     setOcrError(null);
     setOcrItems([]);
     setOcrRawLines([]);
     setOcrRequested(false);
-    setSelectedOcrItemKeys([]);
+    setReceiptMeta({});
+    setSelectedOcrItemIds([]);
+    setAssignments({});
+    setScannerMode("STANDARD");
+    setExpandedOcrItemIds([]);
   }
 
-  async function runReceiptOcr(file: File) {
+  async function runReceiptOcr(files: File[]) {
     const formData = new FormData();
-    formData.append("file", file);
+    files.forEach((file) => formData.append("files", file));
+    formData.append("llmType", receiptAnalyzerMode);
 
     setOcrLoading(true);
     setOcrRequested(true);
     setOcrError(null);
     setOcrItems([]);
     setOcrRawLines([]);
-    setSelectedOcrItemKeys([]);
+    setSelectedOcrItemIds([]);
+    setAssignments({});
+    setExpandedOcrItemIds([]);
 
     try {
       const response = await api.postFormData("/api/expenses/receipt/ocr", formData) as ReceiptOcrResponse;
-      const items = (response.items ?? []).filter((item) => !shouldHideOcrItem(item));
-      const rawLines = response.rawLines ?? [];
+      const items = (response.items ?? []).map(toEditableReceiptItem);
       setOcrItems(items);
-      setOcrRawLines(rawLines);
-      setSelectedOcrItemKeys(items.map((item, index) => getOcrItemKey(item, index)));
+      setOcrRawLines(response.rawLines ?? []);
+      setReceiptMeta({
+        storeName: response.establishment,
+        total: response.total,
+        currency: response.currency,
+      });
+      setSelectedOcrItemIds(items.map((item) => item.id));
+
+      if (response.establishment && !form.getValues("description")) {
+        form.setValue("description", `Zakupy ${response.establishment}`, { shouldDirty: true });
+      }
 
       if (items.length === 0) {
-        toast.info(rawLines.length > 0
-          ? "OCR odczytał tekst, ale nie złożył z niego pozycji zakupowych"
-          : "OCR nie zwrócił czytelnego tekstu z tego zdjęcia");
+        toast.info("Analizator nie zwrócił pozycji zakupowych dla tego zdjęcia");
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Nie udało się odczytać paragonu";
+      const message = err instanceof Error ? err.message : "Nie udało się przeanalizować paragonu";
       setOcrError(message);
       toast.error(message);
     } finally {
       setOcrLoading(false);
     }
+  }
+
+  function toEditableReceiptItem(item: ReceiptOcrItem, index: number): EditableReceiptItem {
+    const totalPrice = numberOrFallback(item.totalPrice, item.amount);
+    const priceWithDiscount = numberOrFallback(item.priceWithDiscount, item.amount);
+    return {
+      id: `${index}-${item.name}-${item.amount}`,
+      name: item.name || "Pozycja",
+      amount: priceWithDiscount,
+      rawLine: item.rawLine ?? item.name ?? "",
+      quantity: item.quantity,
+      weight: item.weight,
+      price: item.price,
+      discount: item.discount,
+      totalPrice,
+      priceWithDiscount,
+    };
+  }
+
+  function updateOcrItem(id: string, changes: Partial<Pick<EditableReceiptItem, "name" | "totalPrice" | "priceWithDiscount">>) {
+    setOcrItems((prev) => prev.map((item) => {
+      if (item.id !== id) {
+        return item;
+      }
+      const next = { ...item, ...changes };
+      return {
+        ...next,
+        amount: normalizeAmount(next.priceWithDiscount),
+      };
+    }));
+  }
+
+  function toggleOcrItemEditor(id: string) {
+    setExpandedOcrItemIds((prev) =>
+      prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]
+    );
+  }
+
+  function toggleOcrItem(item: EditableReceiptItem) {
+    if (scannerMode !== "STANDARD") {
+      setAssignments((prev) => {
+        const current = prev[item.id];
+        const next = { ...prev };
+        if (current === scannerMode) {
+          delete next[item.id];
+        } else {
+          next[item.id] = scannerMode;
+        }
+        return next;
+      });
+      return;
+    }
+
+    setSelectedOcrItemIds((prev) =>
+      prev.includes(item.id) ? prev.filter((entry) => entry !== item.id) : [...prev, item.id]
+    );
+  }
+
+  function assignSelected(target: AssignmentTarget) {
+    setAssignments((prev) => {
+      const next = { ...prev };
+      selectedOcrItems.forEach((item) => {
+        next[item.id] = target;
+      });
+      return next;
+    });
+    toast.success(`Przypisano zaznaczone pozycje: ${assignmentLabels[target]}`);
+  }
+
+  function clearAssignmentsFor(target?: AssignmentTarget) {
+    setAssignments((prev) => {
+      if (!target) {
+        return {};
+      }
+      const next = { ...prev };
+      Object.entries(next).forEach(([id, assignedTarget]) => {
+        if (assignedTarget === target) {
+          delete next[id];
+        }
+      });
+      return next;
+    });
   }
 
   function applySelectedOcrAmount() {
@@ -168,32 +276,37 @@ export default function NewExpensePage() {
     toast.success("Wstawiono sumę zaznaczonych pozycji do kwoty");
   }
 
-  function toggleOcrItem(item: ReceiptOcrItem, index: number) {
-    const key = getOcrItemKey(item, index);
-    setSelectedOcrItemKeys((prev) =>
-      prev.includes(key) ? prev.filter((entry) => entry !== key) : [...prev, key]
-    );
+  async function uploadReceiptIfNeeded() {
+    if (receiptFiles.length === 0) {
+      return null;
+    }
+    const uploadedUrls = await Promise.all(receiptFiles.map(async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadResponse = await api.postFormData("/api/expenses/receipt", formData) as { receiptUrl?: string };
+      return uploadResponse.receiptUrl ?? null;
+    }));
+    const receiptUrls = uploadedUrls.filter((url): url is string => Boolean(url));
+    if (receiptUrls.length === 0) {
+      return null;
+    }
+    return receiptUrls.length === 1 ? receiptUrls[0] : JSON.stringify(receiptUrls);
+  }
+
+  function buildExpensePayload(data: ExpenseFormValues, receiptUrl: string | null) {
+    return {
+      ...data,
+      exchangeRateToPLN: data.inputCurrency === "PLN" ? 1.0 : data.exchangeRateToPLN,
+      customOwedPLN: data.settlementMode === "CUSTOM" ? data.customOwedPLN : null,
+      receiptUrl,
+    };
   }
 
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
       setLoading(true);
-      // Clean up optional fields
-      if (!isForeign) data.exchangeRateToPLN = 1.0;
-      if (data.settlementMode !== "CUSTOM") data.customOwedPLN = null;
-
-      let uploadedReceiptUrl: string | null = null;
-      if (receiptFile) {
-        const formData = new FormData();
-        formData.append("file", receiptFile);
-        const uploadResponse = await api.postFormData("/api/expenses/receipt", formData) as { receiptUrl?: string };
-        uploadedReceiptUrl = uploadResponse.receiptUrl ?? null;
-      }
-
-      await api.post("/api/expenses", {
-        ...data,
-        receiptUrl: uploadedReceiptUrl,
-      });
+      const receiptUrl = await uploadReceiptIfNeeded();
+      await api.post("/api/expenses", buildExpensePayload(data, receiptUrl));
       toast.success("Dodano wydatek");
       router.push("/expenses");
     } catch (err: unknown) {
@@ -203,6 +316,49 @@ export default function NewExpensePage() {
     }
   };
 
+  async function saveAssignedExpenses() {
+    const baseData = form.getValues();
+    const validGroups = (Object.entries(assignmentGroups) as [AssignmentTarget, EditableReceiptItem[]][])
+      .filter(([, items]) => items.length > 0);
+
+    if (validGroups.length === 0) {
+      toast.error("Najpierw przypisz pozycje z paragonu");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const receiptUrl = await uploadReceiptIfNeeded();
+      for (const [target, items] of validGroups) {
+        const amount = sumItems(items);
+        await api.post("/api/expenses", {
+          expenseDate: baseData.expenseDate,
+          description: buildGroupDescription(target, items),
+          payer: baseData.payer,
+          settlementMode: settlementModeForAssignment(baseData.payer, target),
+          customOwedPLN: null,
+          inputCurrency: "PLN",
+          inputAmount: amount,
+          exchangeRateToPLN: 1.0,
+          receiptUrl,
+        });
+      }
+      toast.success(`Dodano wydatki z paragonu: ${validGroups.length}`);
+      router.push("/expenses");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Błąd zapisu przypisanych wydatków");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function buildGroupDescription(target: AssignmentTarget, items: EditableReceiptItem[]) {
+    const base = receiptMeta.storeName ? `Zakupy ${receiptMeta.storeName}` : form.getValues("description") || "Zakupy z paragonu";
+    const suffix = target === "HALF" ? "na pół" : `dla ${assignmentLabels[target]}`;
+    const itemLabel = items.length <= 2 ? `: ${items.map((item) => item.name).join(", ")}` : ` (${items.length} poz.)`;
+    return `${base} - ${suffix}${itemLabel}`.slice(0, 200);
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
@@ -210,7 +366,7 @@ export default function NewExpensePage() {
           <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">Dodaj wydatek</h1>
           <p className="text-stone-500 dark:text-stone-400 mt-1">Zarejestruj nowy koszt.</p>
         </div>
-        <Link 
+        <Link
           href="/expenses"
           className="p-2 border border-stone-200 dark:border-stone-800 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors"
         >
@@ -220,7 +376,6 @@ export default function NewExpensePage() {
 
       <div className="p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-sm">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Data dodania</label>
@@ -235,18 +390,14 @@ export default function NewExpensePage() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Kto płacił?</label>
               <div className="flex bg-stone-100 dark:bg-stone-950 p-1 rounded-xl border border-stone-200 dark:border-stone-800">
-                <label className="flex-1">
-                  <input type="radio" value="MACIEK" {...form.register("payer")} className="peer sr-only" />
-                  <div className="text-center px-4 py-1.5 text-sm font-medium rounded-lg cursor-pointer peer-checked:bg-white dark:peer-checked:bg-stone-800 peer-checked:text-indigo-600 dark:peer-checked:text-indigo-400 peer-checked:shadow-sm text-stone-500 hover:text-stone-900 transition-all">
-                    Maciek
-                  </div>
-                </label>
-                <label className="flex-1">
-                  <input type="radio" value="EMILKA" {...form.register("payer")} className="peer sr-only" />
-                  <div className="text-center px-4 py-1.5 text-sm font-medium rounded-lg cursor-pointer peer-checked:bg-white dark:peer-checked:bg-stone-800 peer-checked:text-indigo-600 dark:peer-checked:text-indigo-400 peer-checked:shadow-sm text-stone-500 hover:text-stone-900 transition-all">
-                    Emilka
-                  </div>
-                </label>
+                {(["MACIEK", "EMILKA"] as Person[]).map((person) => (
+                  <label className="flex-1" key={person}>
+                    <input type="radio" value={person} {...form.register("payer")} className="peer sr-only" />
+                    <div className="text-center px-4 py-1.5 text-sm font-medium rounded-lg cursor-pointer peer-checked:bg-white dark:peer-checked:bg-stone-800 peer-checked:text-indigo-600 dark:peer-checked:text-indigo-400 peer-checked:shadow-sm text-stone-500 hover:text-stone-900 transition-all">
+                      {assignmentLabels[person]}
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
           </div>
@@ -268,10 +419,11 @@ export default function NewExpensePage() {
               ref={receiptInputRef}
               id="receipt-file"
               type="file"
+              multiple
               accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={(e) => {
-                const file = e.target.files?.[0] ?? null;
-                setReceiptFile(file);
+                const files = Array.from(e.target.files ?? []);
+                setReceiptFiles(files);
                 resetOcrState();
               }}
               className="sr-only"
@@ -283,16 +435,16 @@ export default function NewExpensePage() {
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
               >
                 <Upload className="w-4 h-4" />
-                {receiptFile ? "Zmień zdjęcie" : "Wybierz zdjęcie"}
+                {hasReceiptFiles ? "Zmień zdjęcia" : "Wybierz zdjęcia"}
               </button>
               <span className="flex-1 min-w-0 truncate text-sm text-stone-600 dark:text-stone-300">
-                {receiptFile ? receiptFile.name : "Nie wybrano pliku"}
+                {receiptFilesLabel}
               </span>
-              {receiptFile && (
+              {hasReceiptFiles && (
                 <button
                   type="button"
                   onClick={() => {
-                    setReceiptFile(null);
+                    setReceiptFiles([]);
                     resetOcrState();
                     if (receiptInputRef.current) {
                       receiptInputRef.current.value = "";
@@ -306,32 +458,32 @@ export default function NewExpensePage() {
                 </button>
               )}
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400">
-              Dozwolone formaty: JPG, PNG, WEBP, GIF (max 10 MB). Dla analizy OCR najpewniej dzialaja JPG i PNG.
-            </p>
           </div>
 
-          {receiptFile && !ocrRequested && (
-            <div className="flex flex-col gap-3 rounded-2xl border border-stone-200 dark:border-stone-800 theme-e:border-pink-200 bg-stone-50/70 dark:bg-stone-950/70 theme-e:bg-white/90 theme-e:shadow-sm p-4 sm:flex-row sm:items-center sm:justify-between">
+          {hasReceiptFiles && !ocrRequested && (
+            <div className="flex flex-col gap-4 rounded-2xl border border-stone-200 dark:border-stone-800 theme-e:border-pink-200 bg-stone-50/70 dark:bg-stone-950/70 theme-e:bg-white/90 theme-e:shadow-sm p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-200">
-                  OCR paragonu
+                  Analiza paragonu
                 </h2>
                 <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                  Jeśli chcesz, możesz przeanalizować paragon i zaznaczyć tylko wybrane pozycje do jednego wydatku.
+                  Jeden skan pozwoli uzupełnić kwotę albo przypisać pozycje do kilku rozliczeń.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => receiptFile && runReceiptOcr(receiptFile)}
-                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-              >
-                Analizuj paragon
-              </button>
+              <div className="flex flex-col gap-3 sm:items-end">
+                <AnalyzerModeSwitch value={receiptAnalyzerMode} onChange={setReceiptAnalyzerMode} />
+                <button
+                  type="button"
+                  onClick={() => runReceiptOcr(receiptFiles)}
+                  className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                >
+                  Analizuj paragon
+                </button>
+              </div>
             </div>
           )}
 
-          {receiptFile && ocrRequested && (
+          {hasReceiptFiles && ocrRequested && (
             <div className="space-y-4 rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-950/70 theme-e:border-pink-200 theme-e:bg-white/90 theme-e:shadow-sm p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -339,23 +491,37 @@ export default function NewExpensePage() {
                     Pozycje z paragonu
                   </h2>
                   <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                    Zaznacz pozycje, które mają wejść do jednego wydatku. Suma zaktualizuje się na żywo.
+                    Edytuj błędne odczyty, a potem użyj sumy albo przypisz pozycje do osób.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => receiptFile && runReceiptOcr(receiptFile)}
-                  disabled={ocrLoading}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 dark:border-stone-800 theme-e:border-pink-200 px-3 py-2 text-sm font-medium text-stone-700 dark:text-stone-200 theme-e:text-[#6f5361] hover:bg-white dark:hover:bg-stone-900 theme-e:hover:bg-pink-50 transition-colors disabled:opacity-60"
-                >
-                  {ocrLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Skanuj ponownie
-                </button>
+                <div className="flex flex-col gap-2 sm:items-end">
+                  <AnalyzerModeSwitch value={receiptAnalyzerMode} onChange={setReceiptAnalyzerMode} disabled={ocrLoading} />
+                  <button
+                    type="button"
+                    onClick={() => runReceiptOcr(receiptFiles)}
+                    disabled={ocrLoading}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 dark:border-stone-800 theme-e:border-pink-200 px-3 py-2 text-sm font-medium text-stone-700 dark:text-stone-200 theme-e:text-[#6f5361] hover:bg-white dark:hover:bg-stone-900 theme-e:hover:bg-pink-50 transition-colors disabled:opacity-60"
+                  >
+                    {ocrLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Skanuj ponownie
+                  </button>
+                </div>
               </div>
+
+              {receiptMeta.storeName || receiptMeta.total ? (
+                <div className="grid grid-cols-1 gap-2 rounded-xl border border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/70 p-3 text-sm sm:grid-cols-2">
+                  <div className="text-stone-600 dark:text-stone-300">
+                    Sklep: <span className="font-semibold text-stone-900 dark:text-white">{receiptMeta.storeName ?? "brak"}</span>
+                  </div>
+                  <div className="text-stone-600 dark:text-stone-300 sm:text-right">
+                    Suma paragonu: <span className="font-semibold text-stone-900 dark:text-white">{formatMoney(receiptMeta.total ?? 0)} {receiptMeta.currency ?? "PLN"}</span>
+                  </div>
+                </div>
+              ) : null}
 
               {ocrLoading && (
                 <div className="rounded-xl border border-indigo-100 bg-indigo-50/80 dark:border-indigo-900/50 dark:bg-indigo-950/30 px-4 py-3 text-sm text-indigo-700 dark:text-indigo-300 theme-e:border-pink-200 theme-e:bg-pink-50 theme-e:text-fuchsia-600">
-                  Trwa analiza paragonu przez OCR...
+                  Trwa analiza paragonu...
                 </div>
               )}
 
@@ -365,37 +531,141 @@ export default function NewExpensePage() {
                 </div>
               )}
 
-              {!ocrLoading && !ocrError && visibleOcrItems.length > 0 && (
+              {!ocrLoading && !ocrError && ocrItems.length > 0 && (
                 <>
-                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                    {visibleOcrItems.map((item, index) => {
-                      const key = getOcrItemKey(item, index);
-                      const checked = selectedOcrItemKeySet.has(key);
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {([
+                      ["STANDARD", "Zaznaczanie", Check],
+                      ["HALF", "Na pół", Split],
+                      ["MACIEK", "Maciek", User],
+                      ["EMILKA", "Emilka", User],
+                    ] as const).map(([mode, label, Icon]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setScannerMode(mode)}
+                        className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                          scannerMode === mode
+                            ? "border-indigo-500 bg-indigo-600 text-white"
+                            : "border-stone-200 bg-white/80 text-stone-700 hover:bg-white dark:border-stone-800 dark:bg-stone-900/70 dark:text-stone-200 dark:hover:bg-stone-900"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
+                    {ocrItems.map((item) => {
+                      const selected = selectedOcrItemSet.has(item.id);
+                      const assignedTarget = assignments[item.id];
+                      const activeAssigned = scannerMode !== "STANDARD" && assignedTarget === scannerMode;
+                      const editorExpanded = expandedOcrItemIds.includes(item.id);
 
                       return (
-                        <label
-                          key={key}
-                          className={`flex items-start gap-3 rounded-xl border px-3 py-3 transition-colors cursor-pointer ${
-                            checked
-                              ? "border-indigo-300 bg-indigo-50/80 dark:border-indigo-800 dark:bg-indigo-950/30 theme-e:border-pink-300 theme-e:bg-pink-100/80"
-                              : "border-stone-200 bg-white/80 dark:border-stone-800 dark:bg-stone-900/50 theme-e:border-pink-200 theme-e:bg-white"
-                          }`}
+                        <div
+                          key={item.id}
+                          onClick={() => toggleOcrItem(item)}
+                          className={`rounded-xl border px-3 py-3 transition-colors sm:px-3 ${
+                            assignedTarget
+                              ? "border-indigo-300 bg-indigo-50/80 dark:border-indigo-800 dark:bg-indigo-950/30"
+                              : selected
+                                ? "border-stone-300 bg-white dark:border-stone-700 dark:bg-stone-900"
+                              : "border-stone-200 bg-white/80 dark:border-stone-800 dark:bg-stone-900/50"
+                          } cursor-pointer`}
                         >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleOcrItem(item, index)}
-                            className="mt-1 h-4 w-4 rounded border-stone-300 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-stone-900 dark:text-white">
-                              {item.name}
+                          <div className="flex items-start gap-2 sm:gap-3">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleOcrItem(item);
+                              }}
+                              className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-colors sm:h-7 sm:w-7 ${
+                                scannerMode === "STANDARD"
+                                  ? selected
+                                    ? "border-indigo-600 bg-indigo-600 text-white"
+                                    : "border-stone-300 bg-white text-transparent dark:border-stone-700 dark:bg-stone-950"
+                                  : activeAssigned
+                                    ? "border-indigo-600 bg-indigo-600 text-white"
+                                    : "border-stone-300 bg-white text-stone-400 dark:border-stone-700 dark:bg-stone-950"
+                              }`}
+                              aria-label="Zaznacz pozycję"
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                            <div className="min-w-0 flex-1 space-y-2 sm:space-y-3">
+                              <div className="grid grid-cols-[1fr_auto] gap-2 sm:flex sm:items-start">
+                                <div className="relative min-w-0 flex-1">
+                                  <input
+                                    value={item.name}
+                                    onChange={(event) => updateOcrItem(item.id, { name: event.target.value })}
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleOcrItemEditor(item.id);
+                                  }}
+                                  className={`flex h-10 w-10 items-center justify-center rounded-lg border text-stone-500 transition-colors sm:hidden ${
+                                    editorExpanded
+                                      ? "border-indigo-500 bg-indigo-600 text-white"
+                                      : "border-stone-200 bg-stone-50 hover:bg-stone-100 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300 dark:hover:bg-stone-900"
+                                  }`}
+                                  aria-label={editorExpanded ? "Ukryj edycję pozycji" : "Edytuj ceny pozycji"}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <div className="col-span-2 text-left sm:col-span-1 sm:text-right">
+                                  <div className="text-xs uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                                    Do rozliczenia
+                                  </div>
+                                  <div className="text-lg font-black text-stone-900 dark:text-white">
+                                    {formatMoney(item.priceWithDiscount)} zł
+                                  </div>
+                                </div>
+                              </div>
+                              <div className={`${editorExpanded ? "grid" : "hidden"} grid-cols-1 gap-2 sm:grid sm:grid-cols-2`}>
+                                <label className="space-y-1">
+                                  <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Cena przed obniżką</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={numberInputValue(item.totalPrice)}
+                                    onChange={(event) => updateOcrItem(item.id, { totalPrice: normalizeAmount(event.target.valueAsNumber) })}
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white"
+                                  />
+                                </label>
+                                <label className="space-y-1">
+                                  <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Cena po obniżce</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={numberInputValue(item.priceWithDiscount)}
+                                    onChange={(event) => updateOcrItem(item.id, { priceWithDiscount: normalizeAmount(event.target.valueAsNumber) })}
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white"
+                                  />
+                                </label>
+                              </div>
+                              <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+                                {item.quantity ? <span>Ilość: {item.quantity}</span> : null}
+                                {item.weight ? <span>Waga: {item.weight} kg</span> : null}
+                                {item.discount ? <span>Rabat: {formatMoney(item.discount)} zł</span> : null}
+                                {assignedTarget ? (
+                                  <span className={`font-semibold ${assignmentTextClasses[assignedTarget]}`}>
+                                    Przypisano: {assignmentLabels[assignedTarget]}
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
-                          <div className="whitespace-nowrap text-sm font-semibold text-stone-900 dark:text-white">
-                            {item.amount.toFixed(2)} zł
-                          </div>
-                        </label>
+                        </div>
                       );
                     })}
                   </div>
@@ -403,10 +673,10 @@ export default function NewExpensePage() {
                   <div className="grid gap-3 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/70 theme-e:border-pink-200 theme-e:bg-white p-4 sm:grid-cols-[1fr_auto] sm:items-center">
                     <div>
                       <div className="text-sm font-medium text-stone-900 dark:text-white">
-                        Zaznaczone pozycje: {selectedOcrItems.length} / {visibleOcrItems.length}
+                        Zaznaczone: {selectedOcrItems.length} / {ocrItems.length} · Przypisane: {assignedCount} / {ocrItems.length}
                       </div>
                       <div className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                        Ta suma może zostać wpisana do pola kwoty dla jednego wydatku.
+                        Na pół: {formatMoney(sumItems(assignmentGroups.HALF))} zł · Maciek: {formatMoney(sumItems(assignmentGroups.MACIEK))} zł · Emilka: {formatMoney(sumItems(assignmentGroups.EMILKA))} zł
                       </div>
                     </div>
                     <div className="text-left sm:text-right">
@@ -414,22 +684,22 @@ export default function NewExpensePage() {
                         Suma zaznaczonych
                       </div>
                       <div className="mt-1 text-2xl font-black text-stone-900 dark:text-white">
-                        {selectedOcrAmount.toFixed(2)} zł
+                        {formatMoney(selectedOcrAmount)} zł
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button
                       type="button"
-                      onClick={() => setSelectedOcrItemKeys(visibleOcrItems.map((item, index) => getOcrItemKey(item, index)))}
+                      onClick={() => setSelectedOcrItemIds(ocrItems.map((item) => item.id))}
                       className="rounded-xl border border-stone-200 dark:border-stone-800 theme-e:border-pink-200 px-3 py-2 text-sm font-medium text-stone-700 dark:text-stone-200 theme-e:text-[#6f5361] hover:bg-white dark:hover:bg-stone-900 theme-e:hover:bg-pink-50 transition-colors"
                     >
                       Zaznacz wszystko
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSelectedOcrItemKeys([])}
+                      onClick={() => setSelectedOcrItemIds([])}
                       className="rounded-xl border border-stone-200 dark:border-stone-800 theme-e:border-pink-200 px-3 py-2 text-sm font-medium text-stone-700 dark:text-stone-200 theme-e:text-[#6f5361] hover:bg-white dark:hover:bg-stone-900 theme-e:hover:bg-pink-50 transition-colors"
                     >
                       Wyczyść zaznaczenie
@@ -442,22 +712,60 @@ export default function NewExpensePage() {
                     >
                       Użyj sumy zaznaczonych
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => assignSelected("HALF")}
+                      disabled={selectedOcrItems.length === 0}
+                      className="rounded-xl border border-indigo-200 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+                    >
+                      Zaznaczone na pół
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => assignSelected("MACIEK")}
+                      disabled={selectedOcrItems.length === 0}
+                      className="rounded-xl border border-indigo-200 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+                    >
+                      Zaznaczone Maciek
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => assignSelected("EMILKA")}
+                      disabled={selectedOcrItems.length === 0}
+                      className="rounded-xl border border-indigo-200 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+                    >
+                      Zaznaczone Emilka
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => clearAssignmentsFor()}
+                      disabled={assignedCount === 0}
+                      className="rounded-xl border border-stone-200 dark:border-stone-800 px-3 py-2 text-sm font-medium text-stone-700 dark:text-stone-200 hover:bg-white dark:hover:bg-stone-900 transition-colors disabled:opacity-60"
+                    >
+                      Wyczyść przypisania
+                    </button>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={saveAssignedExpenses}
+                    disabled={loading || assignedCount === 0}
+                    className="w-full rounded-xl bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-stone-800 disabled:opacity-60 dark:bg-white dark:text-stone-950 dark:hover:bg-stone-200"
+                  >
+                    Zapisz przypisane wydatki z paragonu
+                  </button>
                 </>
               )}
 
-              {!ocrLoading && !ocrError && visibleOcrItems.length === 0 && (
+              {!ocrLoading && !ocrError && ocrItems.length === 0 && (
                 <div className="space-y-3">
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
-                    {ocrRawLines.length > 0
-                      ? "OCR odczytał tekst, ale nie udało się automatycznie złożyć pozycji zakupowych. Poniżej masz surowe linie z OCR do szybkiego sprawdzenia."
-                      : "OCR nie zwrócił czytelnego tekstu z tego zdjęcia. Spróbuj ująć cały paragon, zrobić bardziej płaskie zdjęcie albo zeskanować ponownie."}
+                    Analizator nie zwrócił pozycji zakupowych. Spróbuj zeskanować ponownie albo wpisz wydatek ręcznie.
                   </div>
-
                   {ocrRawLines.length > 0 && (
                     <details className="rounded-xl border border-stone-200 dark:border-stone-800 theme-e:border-pink-200 bg-white/70 dark:bg-stone-900/50 theme-e:bg-white p-4">
                       <summary className="cursor-pointer text-sm font-medium text-stone-900 dark:text-white">
-                        Pokaż surowe linie OCR ({ocrRawLines.length})
+                        Pokaż surowe linie ({ocrRawLines.length})
                       </summary>
                       <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
                         {ocrRawLines.map((line, index) => (
@@ -476,114 +784,172 @@ export default function NewExpensePage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Kwota</label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="100.00"
-                {...form.register("inputAmount", { valueAsNumber: true })}
-                className="w-full px-4 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              {errors.inputAmount && <p className="text-xs text-red-500">{errors.inputAmount.message}</p>}
-            </div>
+          {!hasRecognizedReceiptItems && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Kwota</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="100.00"
+                    {...form.register("inputAmount", { valueAsNumber: true })}
+                    className="w-full px-4 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  {errors.inputAmount && <p className="text-xs text-red-500">{errors.inputAmount.message}</p>}
+                </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Waluta</label>
-              <div className="relative">
-                <select
-                  {...form.register("inputCurrency")}
-                  className={selectClassName}
-                >
-                  <option value="PLN">PLN</option>
-                  <option value="EUR">EUR</option>
-                  <option value="USD">USD</option>
-                  <option value="GBP">GBP</option>
-                  <option value="CZK">CZK</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 dark:text-stone-400 theme-e:text-[#8b6d7c]" />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Waluta</label>
+                  <div className="relative">
+                    <select
+                      {...form.register("inputCurrency")}
+                      className={selectClassName}
+                    >
+                      <option value="PLN">PLN</option>
+                      <option value="EUR">EUR</option>
+                      <option value="USD">USD</option>
+                      <option value="GBP">GBP</option>
+                      <option value="CZK">CZK</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 dark:text-stone-400 theme-e:text-[#8b6d7c]" />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {isForeign && (
-            <div className="space-y-2 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/30">
-              <label className="text-sm font-medium text-amber-800 dark:text-amber-500">
-                Kurs wymiany (z {currency} na PLN)
-              </label>
-              <input
-                type="number"
-                step="0.0001"
-                placeholder="4.35"
-                {...form.register("exchangeRateToPLN", { valueAsNumber: true })}
-                className="w-full px-4 py-2 border border-amber-200 dark:border-amber-800/50 rounded-xl bg-white dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-              {errors.exchangeRateToPLN && <p className="text-xs text-red-500">{errors.exchangeRateToPLN.message}</p>}
-            </div>
+              {isForeign && (
+                <div className="space-y-2 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                  <label className="text-sm font-medium text-amber-800 dark:text-amber-500">
+                    Kurs wymiany (z {currency} na PLN)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    placeholder="4.35"
+                    {...form.register("exchangeRateToPLN", { valueAsNumber: true })}
+                    className="w-full px-4 py-2 border border-amber-200 dark:border-amber-800/50 rounded-xl bg-white dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  {errors.exchangeRateToPLN && <p className="text-xs text-red-500">{errors.exchangeRateToPLN.message}</p>}
+                </div>
+              )}
+
+              <div className="space-y-4 pt-4 border-t border-stone-100 dark:border-stone-800">
+                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Tryb rozliczenia</label>
+                <div className="flex flex-col gap-3">
+                  <SettlementOption value="HALF" form={form} title="Na pół" description="Koszty dzielone są po równo (50/50)." />
+                  <SettlementOption value="NOT_SETTLED" form={form} title="Bez rozliczania" description="Wydatek nie wpływa na saldo końcowe, tylko śledzimy koszt." />
+                  <SettlementOption value="FULL" form={form} title="Druga osoba oddaje całość" description="Ktoś zapłacił za zakupy drugiej osoby, więc do oddania jest 100% kwoty." />
+                  <SettlementOption value="CUSTOM" form={form} title="Custom" description="Druga osoba ma oddać konkretną kwotę." />
+                </div>
+              </div>
+
+              {settlementMode === "CUSTOM" && (
+                <div className="space-y-2 p-4 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-stone-200 dark:border-stone-700 text-sm">
+                  <label className="font-medium text-stone-700 dark:text-stone-300">
+                    Ile druga osoba ma oddać zadłużenia? (w PLN)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="np. 30.00"
+                    {...form.register("customOwedPLN", { valueAsNumber: true })}
+                    className="w-full px-4 py-2 border border-stone-200 dark:border-stone-700 rounded-xl bg-white dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  {errors.customOwedPLN && <p className="text-xs text-red-500">{errors.customOwedPLN.message}</p>}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl shadow-sm transition-colors disabled:opacity-70 flex justify-center items-center gap-2"
+              >
+                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                Zapisz wydatek
+              </button>
+            </>
           )}
-
-          <div className="space-y-4 pt-4 border-t border-stone-100 dark:border-stone-800">
-            <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Tryb rozliczenia</label>
-            <div className="flex flex-col gap-3">
-              <label className="flex items-center p-4 border border-stone-200 dark:border-stone-800 rounded-xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/10">
-                <input type="radio" value="HALF" {...form.register("settlementMode")} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-stone-300" />
-                <div className="ml-3">
-                  <span className="block text-sm font-medium text-stone-900 dark:text-white">Na pół</span>
-                  <span className="block text-sm text-stone-500">Koszty dzielone są po równo (50/50).</span>
-                </div>
-              </label>
-              <label className="flex items-center p-4 border border-stone-200 dark:border-stone-800 rounded-xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/10">
-                <input type="radio" value="NOT_SETTLED" {...form.register("settlementMode")} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-stone-300" />
-                <div className="ml-3">
-                  <span className="block text-sm font-medium text-stone-900 dark:text-white">Bez rozliczania</span>
-                  <span className="block text-sm text-stone-500">Wydatek nie wpływa na saldo końcowe, tylko śledzimy koszt.</span>
-                </div>
-              </label>
-              <label className="flex items-center p-4 border border-stone-200 dark:border-stone-800 rounded-xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/10">
-                <input type="radio" value="FULL" {...form.register("settlementMode")} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-stone-300" />
-                <div className="ml-3">
-                  <span className="block text-sm font-medium text-stone-900 dark:text-white">Druga osoba oddaje całość</span>
-                  <span className="block text-sm text-stone-500">Ktoś zapłacił za zakupy drugiej osoby, więc do oddania jest 100% kwoty.</span>
-                </div>
-              </label>
-              <label className="flex items-center p-4 border border-stone-200 dark:border-stone-800 rounded-xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/10">
-                <input type="radio" value="CUSTOM" {...form.register("settlementMode")} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-stone-300" />
-                <div className="ml-3">
-                  <span className="block text-sm font-medium text-stone-900 dark:text-white">Custom</span>
-                  <span className="block text-sm text-stone-500">Druga osoba ma oddać konkretną kwotę.</span>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {settlementMode === "CUSTOM" && (
-            <div className="space-y-2 p-4 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-stone-200 dark:border-stone-700 text-sm">
-              <label className="font-medium text-stone-700 dark:text-stone-300">
-                Ile druga osoba ma oddać zadłużenia? (w PLN)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="np. 30.00"
-                {...form.register("customOwedPLN", { valueAsNumber: true })}
-                className="w-full px-4 py-2 border border-stone-200 dark:border-stone-700 rounded-xl bg-white dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              {errors.customOwedPLN && <p className="text-xs text-red-500">{errors.customOwedPLN.message}</p>}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl shadow-sm transition-colors disabled:opacity-70 flex justify-center items-center gap-2"
-          >
-            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-            Zapisz wydatek
-          </button>
-
         </form>
       </div>
     </div>
   );
+}
+
+function SettlementOption({
+  value,
+  title,
+  description,
+  form,
+}: {
+  value: SettlementMode;
+  title: string;
+  description: string;
+  form: ReturnType<typeof useForm<ExpenseFormValues>>;
+}) {
+  return (
+    <label className="flex items-center p-4 border border-stone-200 dark:border-stone-800 rounded-xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/10">
+      <input type="radio" value={value} {...form.register("settlementMode")} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-stone-300" />
+      <div className="ml-3">
+        <span className="block text-sm font-medium text-stone-900 dark:text-white">{title}</span>
+        <span className="block text-sm text-stone-500">{description}</span>
+      </div>
+    </label>
+  );
+}
+
+function AnalyzerModeSwitch({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: ReceiptAnalyzerMode;
+  onChange: (value: ReceiptAnalyzerMode) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex w-full rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-800 dark:bg-stone-950 sm:w-auto">
+      {(["light", "heavy"] as ReceiptAnalyzerMode[]).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode)}
+          disabled={disabled}
+          className={`flex-1 rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors sm:flex-none ${
+            value === mode
+              ? "bg-indigo-600 text-white shadow-sm"
+              : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900"
+          } disabled:opacity-60`}
+        >
+          {analyzerModeLabels[mode]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function settlementModeForAssignment(payer: Person, target: AssignmentTarget): SettlementMode {
+  if (target === "HALF") {
+    return "HALF";
+  }
+  return payer === target ? "NOT_SETTLED" : "FULL";
+}
+
+function sumItems(items: EditableReceiptItem[]) {
+  return Number(items.reduce((sum, item) => sum + normalizeAmount(item.priceWithDiscount), 0).toFixed(2));
+}
+
+function numberOrFallback(value: number | null | undefined, fallback: number | null | undefined) {
+  return normalizeAmount(value ?? fallback ?? 0);
+}
+
+function normalizeAmount(value: number | null | undefined) {
+  return Number.isFinite(value) ? Number(Number(value).toFixed(2)) : 0;
+}
+
+function numberInputValue(value: number) {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function formatMoney(value: number) {
+  return normalizeAmount(value).toFixed(2);
 }

@@ -17,4 +17,6 @@ public class ReceiptOcrResponse {
     private String establishment;
     private String purchaseDate;
     private Integer creditsRemaining;
+    private java.math.BigDecimal total;
+    private String currency;
 }

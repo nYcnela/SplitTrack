@@ -1,7 +1,19 @@
 import { getAppPassword, clearAppPassword } from "./auth";
 
 export function getApiBaseUrl(): string {
-  // Keep API calls same-origin and let Next.js proxy /api and /uploads to backend.
+  const configuredUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "");
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  if (typeof window !== "undefined") {
+    const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+    if (localHosts.has(window.location.hostname)) {
+      return `http://${window.location.hostname === "::1" ? "[::1]" : window.location.hostname}:8080`;
+    }
+  }
+
+  // Fall back to same-origin and let Next.js proxy /api and /uploads to backend.
   return "";
 }
 
@@ -40,10 +52,17 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   }
 
   if (!response.ok) {
-    let msg = "Wystąpił błąd API";
+    let msg = `Wystąpił błąd API (${response.status})`;
     try {
-      const data = await response.json();
-      msg = data.message || msg;
+      const text = await response.text();
+      if (text) {
+        try {
+          const data = JSON.parse(text);
+          msg = data.message || data.error || text;
+        } catch {
+          msg = text;
+        }
+      }
     } catch {}
     throw new ApiError(msg, response.status);
   }
