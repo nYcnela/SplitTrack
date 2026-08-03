@@ -328,3 +328,37 @@ textarea {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+.theme-e .app-dialog-surface {
+  background-color: #fffcfd !important;
+  border-color: rgba(244, 114, 182, 0.55) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.theme-e header {
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.shopping-list-dialog input,
+.shopping-list-dialog textarea {
+  width: 100%;
+  border: 1px solid rgb(231 229 228);
+  border-radius: 4px;
+  background: rgb(250 250 249);
+  padding: 0.6rem 0.75rem;
+  color: rgb(28 25 23);
+}
+
+.shopping-list-dialog textarea { min-height: 5rem; resize: vertical; }
+.shopping-list-dialog input:focus,
+.shopping-list-dialog textarea:focus { outline: none; border-color: rgb(99 102 241); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+.dark .shopping-list-dialog input,
+.dark .shopping-list-dialog textarea { border-color: rgb(41 37 36); background: rgb(12 10 9); color: white; }
+
+.shopping-list-item + .shopping-list-item { border-top: 1px solid rgb(245 245 244); }
+.touch-drag-handle { color: rgb(161 161 170); cursor: grab; touch-action: none; }
+.touch-drag-handle:active { cursor: grabbing; color: rgb(99 102 241); }
+.theme-e .shopping-list-item + .shopping-list-item { border-top-color: rgba(244, 114, 182, 0.32); }

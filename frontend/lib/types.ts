@@ -85,3 +85,20 @@ export interface ReceiptOcrResponse {
   total?: number | null;
   currency?: string | null;
 }
+
+export interface ShoppingListItemDTO {
+  id: number;
+  title: string;
+  pricePLN?: number | null;
+  imageUrl?: string | null;
+  sortOrder: number;
+  offerUrls: string[];
+}
+
+export interface ShoppingListDTO {
+  id: number;
+  name: string;
+  description?: string | null;
+  sortOrder: number;
+  items: ShoppingListItemDTO[];
+}

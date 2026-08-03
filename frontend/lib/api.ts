@@ -89,6 +89,7 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
     throw new ApiError(msg, response.status);
   }
 
+  if (response.status === 204) return null;
   return response.json();
 }
 
@@ -99,6 +100,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  put: (endpoint: string, body: unknown) =>
+    fetchWithAuth(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  delete: (endpoint: string) => fetchWithAuth(endpoint, { method: "DELETE" }),
   postFormData: (endpoint: string, body: FormData) =>
     fetchWithAuth(endpoint, {
       method: "POST",

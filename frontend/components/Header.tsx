@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Wallet, Menu, Palette, X } from "lucide-react";
+import { Wallet, Menu, Palette, X, ListTodo } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -15,6 +15,7 @@ export function Header() {
     { href: "/", label: "Dashboard" },
     { href: "/expenses", label: "Wydatki" },
     { href: "/expenses/new", label: "+ Dodaj" },
+    { href: "/shopping-lists", label: "Listy zakupowe" },
     { href: "/settlements", label: "Rozliczenia" },
     { href: "/export", label: "Eksport" },
   ];
@@ -86,6 +87,9 @@ export function Header() {
             </Link>
             <Link href="/expenses/new" className={getDesktopNavClass("/expenses/new", true)}>
               + Dodaj
+            </Link>
+            <Link href="/shopping-lists" className={getDesktopNavClass("/shopping-lists")}>
+              <ListTodo className="mr-1 inline-block h-4 w-4" /> Listy
             </Link>
             <Link href="/settlements" className={getDesktopNavClass("/settlements")}>
               Rozliczenia
