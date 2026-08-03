@@ -249,3 +249,82 @@ body.theme-e {
     text-wrap: balance;
   }
 }
+
+/* SplitTrack surface system: compact, technical components with sharp edges. */
+:root {
+  --surface-shadow: 0 1px 2px rgba(20, 24, 40, 0.05), 0 0 0 1px rgba(20, 24, 40, 0.025);
+  --control-shadow: inset 0 0 0 1px rgba(20, 24, 40, 0.035), 0 1px 2px rgba(20, 24, 40, 0.035);
+}
+
+body {
+  background-image: linear-gradient(rgba(20, 24, 40, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(20, 24, 40, 0.025) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.theme-e body,
+body.theme-e {
+  background-image: linear-gradient(rgba(217, 70, 239, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(217, 70, 239, 0.045) 1px, transparent 1px);
+}
+
+/* The source utility classes remain in JSX, but their geometry is standardized here. */
+:where(.rounded, .rounded-sm, .rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl) {
+  border-radius: 4px !important;
+}
+
+:where(.rounded-full) {
+  border-radius: 9999px !important;
+}
+
+:where(.bg-white, .dark\:bg-stone-900, .dark\:bg-stone-950).border,
+:where(.rounded-xl, .rounded-2xl).border {
+  box-shadow: var(--surface-shadow);
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  box-shadow: var(--control-shadow);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition-duration: 160ms !important;
+}
+
+:where(h1, h2, h3, h4, p, span, a, button, label, th, td) {
+  letter-spacing: 0 !important;
+}
+
+.app-page-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  color: rgb(120 113 108);
+}
+
+.theme-e .app-page-title {
+  color: #8b6d7c;
+}
+
+.surface-heading {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: rgb(120 113 108);
+}
+
+.theme-e .surface-heading {
+  color: #8b6d7c;
+}
+
+/* Menus need an opaque surface so their options remain readable over page content. */
+.theme-e .app-menu-surface {
+  background-color: #fffcfd !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

@@ -113,8 +113,9 @@ export default function SettlementsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">Rozliczenia</h1>
+      <div className="border-b border-stone-200 dark:border-stone-800 pb-5">
+        <p className="app-page-title">Historia sald</p>
+        <h1 className="text-3xl font-bold text-stone-900 dark:text-white mt-2">Rozliczenia</h1>
         <p className="text-stone-500 dark:text-stone-400 mt-1">Zarządzaj przelewami między sobą.</p>
       </div>
 
@@ -213,7 +214,7 @@ export default function SettlementsPage() {
         <div className="lg:col-span-8 order-1 lg:order-2 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-sm">
             <h2 className="text-lg font-bold text-stone-900 dark:text-white">Historia</h2>
-            <div className="w-full md:w-auto flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+            <div className="w-full md:w-auto flex flex-col-reverse md:flex-row-reverse gap-3 items-stretch md:items-center">
               {scope === "month" && (
                 <MonthPicker
                   month={month}

@@ -60,15 +60,15 @@ export function Header() {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/80 dark:bg-stone-900/80 theme-e:bg-pink-50/70 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 theme-e:border-pink-200/50">
+    <header className="sticky top-0 z-40 relative bg-white/80 dark:bg-stone-900/80 theme-e:bg-pink-50/70 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 theme-e:border-pink-200/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link
             href="/"
-            className="flex items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 theme-e:focus-visible:ring-pink-400"
+            className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 theme-e:focus-visible:ring-pink-400"
             aria-label="Przejdź do dashboardu"
           >
-            <div className="bg-indigo-600 p-2 rounded-xl text-white">
+            <div className="bg-indigo-600 p-2 rounded text-white shadow-sm">
               <Wallet className="w-5 h-5" />
             </div>
             <span className="font-bold text-xl tracking-tight hidden sm:block text-indigo-950 dark:text-white">
@@ -77,7 +77,7 @@ export function Header() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex gap-1 items-center bg-stone-100 dark:bg-stone-800/50 p-1 rounded-xl border border-stone-200/50 dark:border-stone-800">
+          <nav className="hidden md:flex gap-1 items-center bg-stone-100 dark:bg-stone-800/50 p-1 rounded border border-stone-200/70 dark:border-stone-800">
             <Link href="/" className={getDesktopNavClass("/")}>
               Dashboard
             </Link>
@@ -131,7 +131,7 @@ export function Header() {
       <div
         id="mobile-nav-menu"
         aria-hidden={!mobileMenuOpen}
-        className={`md:hidden grid overflow-hidden transition-all duration-300 ease-out ${
+        className={`app-menu-surface absolute top-full left-0 right-0 z-50 md:hidden grid overflow-hidden bg-white dark:bg-stone-900 theme-e:bg-pink-50 shadow-lg border-b border-stone-200 dark:border-stone-800 theme-e:border-pink-200/50 transition-all duration-300 ease-out ${
           mobileMenuOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         }`}
       >

@@ -81,9 +81,10 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-stone-200 dark:border-stone-800 pb-5">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">Wydatki</h1>
+          <p className="app-page-title">Rejestr kosztów</p>
+          <h1 className="text-3xl font-bold text-stone-900 dark:text-white mt-2">Wydatki</h1>
           <p className="text-stone-500 dark:text-stone-400 mt-1">Przeglądaj wszystkie dodane koszty.</p>
         </div>
         
@@ -111,6 +112,7 @@ export default function ExpensesPage() {
         </div>
         
         <div className="w-full md:w-auto flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+          <ScopePicker scope={scope} onChange={setScope} />
           {scope === "month" && (
             <MonthPicker
               month={month}
@@ -119,7 +121,6 @@ export default function ExpensesPage() {
               onNext={() => setMonth(getNextMonth(month))}
             />
           )}
-          <ScopePicker scope={scope} onChange={setScope} />
         </div>
       </div>
 

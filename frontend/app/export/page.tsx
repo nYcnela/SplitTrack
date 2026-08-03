@@ -23,8 +23,9 @@ export default function ExportPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">Eksport Danych</h1>
+      <div className="border-b border-stone-200 dark:border-stone-800 pb-5">
+        <p className="app-page-title">Archiwum danych</p>
+        <h1 className="text-3xl font-bold text-stone-900 dark:text-white mt-2">Eksport Danych</h1>
         <p className="text-stone-500 dark:text-stone-400 mt-1">Pobierz swoje wydatki i rozliczenia w formacie CSV lub Excel.</p>
       </div>
 

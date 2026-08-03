@@ -90,13 +90,15 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-stone-200 dark:border-stone-800 pb-5">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">Dashboard</h1>
+          <p className="app-page-title">Przegląd finansów</p>
+          <h1 className="text-3xl font-bold text-stone-900 dark:text-white mt-2">Dashboard</h1>
           <p className="text-stone-500 dark:text-stone-400 mt-1">Podsumowanie Waszych wydatków.</p>
         </div>
         
         <div className="w-full md:w-auto flex flex-col md:flex-row gap-3 items-stretch md:items-center md:justify-end">
+          <ScopePicker scope={scope} onChange={setScope} />
           {scope === "month" && (
             <MonthPicker
               month={month}
@@ -105,7 +107,6 @@ export default function Dashboard() {
               onNext={() => setMonth(getNextMonth(month))}
             />
           )}
-          <ScopePicker scope={scope} onChange={setScope} />
         </div>
       </div>
 
@@ -113,14 +114,14 @@ export default function Dashboard() {
         <div className="lg:col-span-8 space-y-6">
           <SummaryCards summary={summary} loading={loading} title={`Podsumowanie główny zakres (${scope === 'cycle' ? 'Obecny cykl' : scope === 'month' ? month : 'Od początku'})`} />
           
-          <div className="p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-sm">
-            <h3 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-6">Rozkład wydatków</h3>
+          <div className="p-5 sm:p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded shadow-sm">
+            <h3 className="surface-heading mb-6">Rozkład wydatków</h3>
             <SpendingBarChart data={chartData} loading={loading} />
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Ostatnie wydatki</h3>
+              <h3 className="surface-heading">Ostatnie wydatki</h3>
               <Link href="/expenses" className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1">
                 Wszystkie wydatki <ArrowRight className="w-4 h-4" />
               </Link>
@@ -130,9 +131,9 @@ export default function Dashboard() {
         </div>
 
         <div className="lg:col-span-4 space-y-6">
-          <div className="p-6 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-stone-900 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-            <h3 className="text-sm font-semibold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider mb-4">W wybranym miesiącu ({month || getSafeCurrentMonthString()})</h3>
+          <div className="p-5 sm:p-6 bg-white dark:bg-stone-900 border border-indigo-200 dark:border-indigo-900/50 rounded shadow-sm relative overflow-hidden">
+            <div className="absolute inset-y-0 left-0 w-1 bg-indigo-600 theme-e:bg-pink-500" aria-hidden="true" />
+            <h3 className="surface-heading text-indigo-800 dark:text-indigo-300 theme-e:text-fuchsia-600 mb-4">W wybranym miesiącu ({month || getSafeCurrentMonthString()})</h3>
             {monthSummary ? (
               <div>
                 <div className="text-sm text-stone-600 dark:text-stone-400">
@@ -154,8 +155,8 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-sm">
-            <h3 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-4">Saldo całkowite (Lifetime)</h3>
+          <div className="p-5 sm:p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded shadow-sm">
+            <h3 className="surface-heading mb-4">Saldo całkowite (Lifetime)</h3>
             {lifetimeSummary ? (
               <div>
                 <div className="text-sm text-stone-600 dark:text-stone-400">

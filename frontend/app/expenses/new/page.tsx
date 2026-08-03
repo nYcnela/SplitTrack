@@ -73,6 +73,13 @@ const analyzerModeLabels: Record<ReceiptAnalyzerMode, string> = {
   heavy: "Heavy",
 };
 
+const settlementModeDetails: Record<SettlementMode, { label: string; description: string }> = {
+  HALF: { label: "Na pół", description: "Koszty dzielone są po równo (50/50)." },
+  NOT_SETTLED: { label: "Bez rozliczania", description: "Wydatek nie wpływa na saldo końcowe, tylko śledzimy koszt." },
+  FULL: { label: "Druga osoba oddaje całość", description: "Do oddania jest 100% kwoty." },
+  CUSTOM: { label: "Własna kwota", description: "Druga osoba ma oddać konkretną kwotę." },
+};
+
 const MAX_RECEIPT_IMAGE_SIDE = 2_000;
 const CLIENT_OPTIMIZATION_THRESHOLD_BYTES = 1_000_000;
 
@@ -130,9 +137,6 @@ export default function NewExpensePage() {
   }, [assignments, ocrItems]);
   const assignedCount = Object.keys(assignments).length;
   const hasRecognizedReceiptItems = ocrRequested && !ocrLoading && !ocrError && ocrItems.length > 0;
-
-  const selectClassName =
-    "w-full appearance-none px-4 pr-10 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-white theme-e:text-[#4a3840] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-stone-300 dark:hover:border-stone-700";
 
   function resetOcrState() {
     setOcrError(null);
@@ -366,9 +370,10 @@ export default function NewExpensePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-800 pb-5">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">Dodaj wydatek</h1>
+          <p className="app-page-title">Nowy wpis</p>
+          <h1 className="text-3xl font-bold text-stone-900 dark:text-white mt-2">Dodaj wydatek</h1>
           <p className="text-stone-500 dark:text-stone-400 mt-1">Zarejestruj nowy koszt.</p>
         </div>
         <Link
@@ -489,7 +494,7 @@ export default function NewExpensePage() {
           )}
 
           {hasReceiptFiles && ocrRequested && (
-            <div className="space-y-4 rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-950/70 theme-e:border-pink-200 theme-e:bg-white/90 theme-e:shadow-sm p-4">
+            <section className="space-y-4 border-t border-stone-200 pt-5 dark:border-stone-800 theme-e:border-pink-200">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-200">
@@ -514,7 +519,7 @@ export default function NewExpensePage() {
               </div>
 
               {receiptMeta.storeName || receiptMeta.total ? (
-                <div className="grid grid-cols-1 gap-2 rounded-xl border border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/70 p-3 text-sm sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1 border-y border-stone-200 py-3 text-sm dark:border-stone-800 sm:grid-cols-2 sm:gap-2">
                   <div className="text-stone-600 dark:text-stone-300">
                     Sklep: <span className="font-semibold text-stone-900 dark:text-white">{receiptMeta.storeName ?? "brak"}</span>
                   </div>
@@ -572,7 +577,7 @@ export default function NewExpensePage() {
                         <div
                           key={item.id}
                           onClick={() => toggleOcrItem(item)}
-                          className={`rounded-xl border px-3 py-3 transition-colors sm:px-3 ${
+                          className={`rounded border px-3 py-2.5 transition-colors sm:px-3 ${
                             assignedTarget
                               ? "border-indigo-300 bg-indigo-50/80 dark:border-indigo-800 dark:bg-indigo-950/30"
                               : selected
@@ -600,14 +605,14 @@ export default function NewExpensePage() {
                             >
                               <Check className="h-4 w-4" />
                             </button>
-                            <div className="min-w-0 flex-1 space-y-2 sm:space-y-3">
+                            <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
                               <div className="grid grid-cols-[1fr_auto] gap-2 sm:flex sm:items-start">
                                 <div className="relative min-w-0 flex-1">
                                   <input
                                     value={item.name}
                                     onChange={(event) => updateOcrItem(item.id, { name: event.target.value })}
                                     onClick={(event) => event.stopPropagation()}
-                                    className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white"
+                                    className="w-full rounded border border-transparent bg-transparent px-1 py-1 text-sm font-medium text-stone-900 focus:border-indigo-500 focus:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white dark:focus:bg-stone-950"
                                   />
                                 </div>
                                 <button
@@ -675,7 +680,7 @@ export default function NewExpensePage() {
                     })}
                   </div>
 
-                  <div className="grid gap-3 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/70 theme-e:border-pink-200 theme-e:bg-white p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div className="grid gap-3 border-t border-stone-200 pt-4 dark:border-stone-800 theme-e:border-pink-200 sm:grid-cols-[1fr_auto] sm:items-center">
                     <div>
                       <div className="text-sm font-medium text-stone-900 dark:text-white">
                         Zaznaczone: {selectedOcrItems.length} / {ocrItems.length} · Przypisane: {assignedCount} / {ocrItems.length}
@@ -786,7 +791,7 @@ export default function NewExpensePage() {
                   )}
                 </div>
               )}
-            </div>
+            </section>
           )}
 
           {!hasRecognizedReceiptItems && (
@@ -806,19 +811,12 @@ export default function NewExpensePage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Waluta</label>
-                  <div className="relative">
-                    <select
-                      {...form.register("inputCurrency")}
-                      className={selectClassName}
-                    >
-                      <option value="PLN">PLN</option>
-                      <option value="EUR">EUR</option>
-                      <option value="USD">USD</option>
-                      <option value="GBP">GBP</option>
-                      <option value="CZK">CZK</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 dark:text-stone-400 theme-e:text-[#8b6d7c]" />
-                  </div>
+                  <CompactSelect
+                    value={currency}
+                    options={["PLN", "EUR", "USD", "GBP", "CZK"].map((value) => ({ value, label: value }))}
+                    onChange={(value) => form.setValue("inputCurrency", value, { shouldDirty: true, shouldValidate: true })}
+                    ariaLabel="Waluta"
+                  />
                 </div>
               </div>
 
@@ -840,12 +838,15 @@ export default function NewExpensePage() {
 
               <div className="space-y-4 pt-4 border-t border-stone-100 dark:border-stone-800">
                 <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Tryb rozliczenia</label>
-                <div className="flex flex-col gap-3">
-                  <SettlementOption value="HALF" form={form} title="Na pół" description="Koszty dzielone są po równo (50/50)." />
-                  <SettlementOption value="NOT_SETTLED" form={form} title="Bez rozliczania" description="Wydatek nie wpływa na saldo końcowe, tylko śledzimy koszt." />
-                  <SettlementOption value="FULL" form={form} title="Druga osoba oddaje całość" description="Ktoś zapłacił za zakupy drugiej osoby, więc do oddania jest 100% kwoty." />
-                  <SettlementOption value="CUSTOM" form={form} title="Custom" description="Druga osoba ma oddać konkretną kwotę." />
-                </div>
+                <CompactSelect
+                  value={settlementMode}
+                  options={(Object.entries(settlementModeDetails) as [SettlementMode, { label: string }][]).map(([value, detail]) => ({ value, label: detail.label }))}
+                  onChange={(value) => form.setValue("settlementMode", value as SettlementMode, { shouldDirty: true, shouldValidate: true })}
+                  ariaLabel="Tryb rozliczenia"
+                />
+                <p className="border-l-2 border-indigo-500 pl-3 text-sm text-stone-500 dark:text-stone-400 theme-e:border-pink-400">
+                  {settlementModeDetails[settlementMode].description}
+                </p>
               </div>
 
               {settlementMode === "CUSTOM" && (
@@ -877,28 +878,6 @@ export default function NewExpensePage() {
         </form>
       </div>
     </div>
-  );
-}
-
-function SettlementOption({
-  value,
-  title,
-  description,
-  form,
-}: {
-  value: SettlementMode;
-  title: string;
-  description: string;
-  form: ReturnType<typeof useForm<ExpenseFormValues>>;
-}) {
-  return (
-    <label className="flex items-center p-4 border border-stone-200 dark:border-stone-800 rounded-xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/10">
-      <input type="radio" value={value} {...form.register("settlementMode")} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-stone-300" />
-      <div className="ml-3">
-        <span className="block text-sm font-medium text-stone-900 dark:text-white">{title}</span>
-        <span className="block text-sm text-stone-500">{description}</span>
-      </div>
-    </label>
   );
 }
 
@@ -979,6 +958,74 @@ function AnalyzerModeSwitch({
           {analyzerModeLabels[mode]}
         </button>
       ))}
+    </div>
+  );
+}
+
+function CompactSelect({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  ariaLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div
+      className="relative"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            setOpen(false);
+            event.currentTarget.blur();
+          }
+        }}
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        className="flex min-h-10 w-full items-center justify-between rounded border border-stone-200 bg-stone-50 px-4 py-2 text-left text-sm font-medium text-stone-900 shadow-sm transition-colors hover:border-stone-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white dark:hover:border-stone-700 theme-e:text-[#4a3840]"
+      >
+        <span>{selected.label}</span>
+        <ChevronDown className={`h-4 w-4 text-stone-500 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="app-menu-surface absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 overflow-hidden rounded border border-stone-300 bg-white p-1 shadow-lg dark:border-stone-700 dark:bg-stone-900 theme-e:border-pink-200 theme-e:bg-white">
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors ${
+                  isSelected
+                    ? "bg-indigo-600 text-white theme-e:bg-pink-500"
+                    : "text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800 theme-e:text-[#4a3840] theme-e:hover:bg-pink-50"
+                }`}
+              >
+                {option.label}
+                {isSelected && <Check className="h-4 w-4" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

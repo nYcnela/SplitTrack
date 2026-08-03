@@ -12,7 +12,7 @@ interface Props {
 export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props) {
   if (loading) {
     return (
-      <div className="p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl animate-pulse">
+      <div className="p-5 sm:p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded animate-pulse">
         <div className="h-6 bg-stone-200 dark:bg-stone-800 rounded w-1/3 mb-4"></div>
         <div className="flex gap-4">
           <div className="h-10 bg-stone-200 dark:bg-stone-800 rounded flex-1"></div>
@@ -29,8 +29,8 @@ export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props
   const maciekOwes = balance.direction === "MACIEK_OWES_EMILKA";
 
   return (
-    <div className="p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-sm">
-      <h3 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-4">
+    <div className="p-5 sm:p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded shadow-sm">
+      <h3 className="surface-heading mb-5">
         {title}
       </h3>
 
@@ -38,7 +38,7 @@ export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props
         {/* Saldo główne */}
         <div className="flex items-start gap-4">
           <div
-            className={`p-3 rounded-xl flex-shrink-0 ${
+            className={`p-3 rounded flex-shrink-0 ${
               isEven
                 ? "bg-emerald-200 text-emerald-700 ring-1 ring-emerald-300 shadow-sm dark:bg-emerald-900/40 dark:text-emerald-300 dark:ring-emerald-800/50 theme-e:bg-emerald-200 theme-e:text-emerald-700 theme-e:ring-emerald-300"
                 : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
@@ -81,7 +81,7 @@ export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props
 
         {/* Suma wydatków */}
         <div className="flex flex-col gap-3 justify-center">
-          <div className="flex justify-between items-center p-3 bg-stone-50 dark:bg-stone-950 rounded-xl border border-stone-100 dark:border-stone-800/50">
+          <div className="flex justify-between items-center p-3 bg-stone-50 dark:bg-stone-950 rounded border border-stone-100 dark:border-stone-800/50">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-blue-500" />
               <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Wydatki Maćka</span>
@@ -89,7 +89,7 @@ export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props
             <span className="font-bold text-stone-900 dark:text-white">{totalsSpent?.MACIEK?.toFixed(2) || "0.00"} zł</span>
           </div>
           
-          <div className="flex justify-between items-center p-3 bg-stone-50 dark:bg-stone-950 rounded-xl border border-stone-100 dark:border-stone-800/50">
+          <div className="flex justify-between items-center p-3 bg-stone-50 dark:bg-stone-950 rounded border border-stone-100 dark:border-stone-800/50">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-purple-500" />
               <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Wydatki Emilki</span>
