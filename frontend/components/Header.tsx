@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Wallet, Menu, Palette, X, ListTodo } from "lucide-react";
+import { Wallet, Menu, Palette, X, ListTodo, FolderKanban } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -16,6 +16,7 @@ export function Header() {
     { href: "/expenses", label: "Wydatki" },
     { href: "/expenses/new", label: "+ Dodaj" },
     { href: "/shopping-lists", label: "Listy zakupowe" },
+    { href: "/projects", label: "Projekty" },
     { href: "/settlements", label: "Rozliczenia" },
     { href: "/export", label: "Eksport" },
   ];
@@ -78,7 +79,7 @@ export function Header() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex gap-1 items-center bg-stone-100 dark:bg-stone-800/50 p-1 rounded border border-stone-200/70 dark:border-stone-800">
+          <nav className="hidden lg:flex gap-1 items-center bg-stone-100 dark:bg-stone-800/50 p-1 rounded border border-stone-200/70 dark:border-stone-800">
             <Link href="/" className={getDesktopNavClass("/")}>
               Dashboard
             </Link>
@@ -90,6 +91,9 @@ export function Header() {
             </Link>
             <Link href="/shopping-lists" className={getDesktopNavClass("/shopping-lists")}>
               <ListTodo className="mr-1 inline-block h-4 w-4" /> Listy
+            </Link>
+            <Link href="/projects" className={getDesktopNavClass("/projects")}>
+              <FolderKanban className="mr-1 inline-block h-4 w-4" /> Projekty
             </Link>
             <Link href="/settlements" className={getDesktopNavClass("/settlements")}>
               Rozliczenia
@@ -117,7 +121,7 @@ export function Header() {
 
             <button
               onClick={() => setMobileMenuOpen((open) => !open)}
-              className={`md:hidden p-2 rounded-xl transition-colors ${
+              className={`lg:hidden p-2 rounded-xl transition-colors ${
                 mobileMenuOpen
                   ? "bg-stone-200 text-stone-900 dark:bg-stone-700 dark:text-white theme-e:bg-pink-100 theme-e:text-fuchsia-600"
                   : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 theme-e:hover:bg-pink-100"
@@ -135,7 +139,7 @@ export function Header() {
       <div
         id="mobile-nav-menu"
         aria-hidden={!mobileMenuOpen}
-        className={`app-menu-surface absolute top-full left-0 right-0 z-50 md:hidden grid overflow-hidden bg-white dark:bg-stone-900 theme-e:bg-pink-50 shadow-lg border-b border-stone-200 dark:border-stone-800 theme-e:border-pink-200/50 transition-all duration-300 ease-out ${
+        className={`app-menu-surface absolute top-full left-0 right-0 z-50 lg:hidden grid overflow-hidden bg-white dark:bg-stone-900 theme-e:bg-pink-50 shadow-lg border-b border-stone-200 dark:border-stone-800 theme-e:border-pink-200/50 transition-all duration-300 ease-out ${
           mobileMenuOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         }`}
       >

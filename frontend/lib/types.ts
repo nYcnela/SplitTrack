@@ -102,3 +102,20 @@ export interface ShoppingListDTO {
   sortOrder: number;
   items: ShoppingListItemDTO[];
 }
+
+export interface ProjectExpenseDTO {
+  id: number;
+  expenseDate: string;
+  description: string;
+  amountPLN: number;
+  imageUrls: string[];
+}
+
+export interface ProjectDTO {
+  id: number;
+  name: string;
+  description?: string | null;
+  budgetPLN: number;
+  spentPLN: number;
+  expenses: ProjectExpenseDTO[];
+}
