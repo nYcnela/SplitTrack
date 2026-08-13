@@ -1,6 +1,7 @@
 package ma.splittrack.expense.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import ma.splittrack.common.domain.Person;
 import ma.splittrack.common.domain.SettlementMode;
+import ma.splittrack.project.api.dto.ProjectRequest;
 
 @Getter
 @Setter
@@ -49,4 +51,10 @@ public class ExpenseCreateRequest {
 
     @Schema(example = "https://example.com/paragon.jpg")
     private String receiptUrl;
+
+    @Schema(example = "1")
+    private Long projectId;
+
+    @Valid
+    private ProjectRequest newProject;
 }

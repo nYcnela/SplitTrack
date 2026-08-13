@@ -24,6 +24,7 @@ public class ExpenseDTO {
     private SettlementMode settlementMode;
     private BigDecimal customOwedPLN;
     private String receiptUrl;
+    private Long projectId;
 
     @Schema(description = "amountPLN if payer=MACIEK, else null")
     private BigDecimal maciekPaid;

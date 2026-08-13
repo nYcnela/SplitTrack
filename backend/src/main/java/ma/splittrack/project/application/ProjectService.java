@@ -17,6 +17,8 @@ import ma.splittrack.project.domain.ProjectExpenseImage;
 import ma.splittrack.project.infrastructure.ProjectExpenseImageRepository;
 import ma.splittrack.project.infrastructure.ProjectExpenseRepository;
 import ma.splittrack.project.infrastructure.ProjectRepository;
+import ma.splittrack.expense.domain.Expense;
+import ma.splittrack.expense.infrastructure.ExpenseRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +27,14 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectExpenseRepository expenseRepository;
     private final ProjectExpenseImageRepository imageRepository;
+    private final ExpenseRepository regularExpenseRepository;
 
     public ProjectService(ProjectRepository projectRepository, ProjectExpenseRepository expenseRepository,
-                          ProjectExpenseImageRepository imageRepository) {
+                          ProjectExpenseImageRepository imageRepository, ExpenseRepository regularExpenseRepository) {
         this.projectRepository = projectRepository;
         this.expenseRepository = expenseRepository;
         this.imageRepository = imageRepository;
+        this.regularExpenseRepository = regularExpenseRepository;
     }
 
     @Transactional(readOnly = true)
@@ -139,14 +143,20 @@ public class ProjectService {
     }
 
     private ProjectDTO toDTO(Project project) {
-        List<ProjectExpense> expenses = expenseRepository.findByProjectIdOrderByExpenseDateDescIdDesc(project.getId());
+        List<ProjectExpenseDTO> expenses = new java.util.ArrayList<>();
+        expenses.addAll(expenseRepository.findByProjectIdOrderByExpenseDateDescIdDesc(project.getId()).stream()
+            .map(this::toExpenseDTO).toList());
+        expenses.addAll(regularExpenseRepository.findByProjectIdOrderByExpenseDateDescIdDesc(project.getId()).stream()
+            .map(this::toExpenseDTO).toList());
+        expenses.sort(java.util.Comparator.comparing(ProjectExpenseDTO::getExpenseDate).reversed()
+            .thenComparing(ProjectExpenseDTO::getId, java.util.Comparator.reverseOrder()));
         ProjectDTO dto = new ProjectDTO();
         dto.setId(project.getId());
         dto.setName(project.getName());
         dto.setDescription(project.getDescription());
         dto.setBudgetPLN(project.getBudgetPLN());
-        dto.setSpentPLN(expenses.stream().map(ProjectExpense::getAmountPLN).reduce(BigDecimal.ZERO, BigDecimal::add));
-        dto.setExpenses(expenses.stream().map(this::toExpenseDTO).toList());
+        dto.setSpentPLN(expenses.stream().map(ProjectExpenseDTO::getAmountPLN).reduce(BigDecimal.ZERO, BigDecimal::add));
+        dto.setExpenses(expenses);
         return dto;
     }
 
@@ -158,7 +168,26 @@ public class ProjectService {
         dto.setAmountPLN(expense.getAmountPLN());
         dto.setImageUrls(imageRepository.findByProjectExpenseIdOrderBySortOrderAscIdAsc(expense.getId()).stream()
             .map(ProjectExpenseImage::getImageUrl).toList());
+        dto.setSource("PROJECT_EXPENSE");
         return dto;
+    }
+
+    private ProjectExpenseDTO toExpenseDTO(Expense expense) {
+        ProjectExpenseDTO dto = new ProjectExpenseDTO();
+        dto.setId(expense.getId());
+        dto.setExpenseDate(expense.getExpenseDate());
+        dto.setDescription(expense.getDescription());
+        dto.setAmountPLN(expense.getAmountPLN());
+        dto.setImageUrls(receiptUrls(expense.getReceiptUrl()));
+        dto.setSource("EXPENSE");
+        return dto;
+    }
+
+    private List<String> receiptUrls(String receiptUrl) {
+        if (receiptUrl == null || receiptUrl.isBlank() || receiptUrl.trim().startsWith("[")) {
+            return List.of();
+        }
+        return List.of(receiptUrl);
     }
 
     private BigDecimal money(BigDecimal value) {

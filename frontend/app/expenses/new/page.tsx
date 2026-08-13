@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { api } from "@/lib/api";
-import type { Person, ReceiptOcrItem, ReceiptOcrResponse, SettlementMode } from "@/lib/types";
+import type { Person, ProjectDTO, ReceiptOcrItem, ReceiptOcrResponse, SettlementMode } from "@/lib/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ArrowLeft, Check, ChevronDown, Loader2, Pencil, Split, Upload, User, X } from "lucide-react";
@@ -42,6 +42,7 @@ type ExpenseFormValues = z.infer<typeof expenseSchema>;
 type AssignmentTarget = "HALF" | Person;
 type ScannerMode = "STANDARD" | AssignmentTarget;
 type ReceiptAnalyzerMode = "light" | "heavy";
+type NewProjectPayload = { name: string; description: string; budgetPLN: number };
 
 interface EditableReceiptItem {
   id: string;
@@ -99,6 +100,14 @@ export default function NewExpensePage() {
   const [receiptAnalyzerMode, setReceiptAnalyzerMode] = useState<ReceiptAnalyzerMode>("light");
   const [assignments, setAssignments] = useState<Record<string, AssignmentTarget>>({});
   const [expandedOcrItemIds, setExpandedOcrItemIds] = useState<string[]>([]);
+  const [projects, setProjects] = useState<ProjectDTO[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [selectedProjectId, setSelectedProjectId] = useState(() =>
+    typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("projectId") ?? ""
+  );
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectBudget, setNewProjectBudget] = useState("");
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -118,6 +127,13 @@ export default function NewExpensePage() {
   const currency = watch("inputCurrency");
   const settlementMode = watch("settlementMode");
   const isForeign = currency !== "PLN";
+
+  useEffect(() => {
+    api.get("/api/projects")
+      .then((response) => setProjects(response as ProjectDTO[]))
+      .catch((error) => toast.error(error instanceof Error ? error.message : "Nie udało się pobrać projektów"))
+      .finally(() => setProjectsLoading(false));
+  }, []);
 
   const selectedOcrItemSet = useMemo(() => new Set(selectedOcrItemIds), [selectedOcrItemIds]);
   const selectedOcrItems = ocrItems.filter((item) => selectedOcrItemSet.has(item.id));
@@ -302,20 +318,39 @@ export default function NewExpensePage() {
     return receiptUrls.length === 1 ? receiptUrls[0] : JSON.stringify(receiptUrls);
   }
 
-  function buildExpensePayload(data: ExpenseFormValues, receiptUrl: string | null) {
+  function getNewProjectPayload(): NewProjectPayload | null | undefined {
+    if (!creatingProject) return null;
+    const budgetPLN = Number(newProjectBudget);
+    if (!newProjectName.trim() || !Number.isFinite(budgetPLN) || budgetPLN <= 0) {
+      toast.error("Podaj nazwę i dodatni budżet nowego projektu");
+      return undefined;
+    }
+    return { name: newProjectName.trim(), description: "", budgetPLN };
+  }
+
+  function selectedProjectIdOrNull() {
+    const projectId = Number(selectedProjectId);
+    return Number.isInteger(projectId) && projectId > 0 ? projectId : null;
+  }
+
+  function buildExpensePayload(data: ExpenseFormValues, receiptUrl: string | null, projectId?: number | null, newProject?: NewProjectPayload | null) {
     return {
       ...data,
       exchangeRateToPLN: data.inputCurrency === "PLN" ? 1.0 : data.exchangeRateToPLN,
       customOwedPLN: data.settlementMode === "CUSTOM" ? data.customOwedPLN : null,
       receiptUrl,
+      projectId: projectId ?? null,
+      newProject: newProject ?? null,
     };
   }
 
   const onSubmit = async (data: ExpenseFormValues) => {
+    const newProject = getNewProjectPayload();
+    if (newProject === undefined) return;
     try {
       setLoading(true);
       const receiptUrl = await uploadReceiptIfNeeded();
-      await api.post("/api/expenses", buildExpensePayload(data, receiptUrl));
+      await api.post("/api/expenses", buildExpensePayload(data, receiptUrl, selectedProjectIdOrNull(), newProject));
       toast.success("Dodano wydatek");
       router.push("/expenses");
     } catch (err: unknown) {
@@ -335,12 +370,17 @@ export default function NewExpensePage() {
       return;
     }
 
+    const newProject = getNewProjectPayload();
+    if (newProject === undefined) return;
+
     try {
       setLoading(true);
       const receiptUrl = await uploadReceiptIfNeeded();
+      let projectId = selectedProjectIdOrNull();
+      let projectToCreate: NewProjectPayload | null = newProject;
       for (const [target, items] of validGroups) {
         const amount = sumItems(items);
-        await api.post("/api/expenses", {
+        const saved = await api.post("/api/expenses", {
           expenseDate: baseData.expenseDate,
           description: buildGroupDescription(target, items),
           payer: baseData.payer,
@@ -350,7 +390,11 @@ export default function NewExpensePage() {
           inputAmount: amount,
           exchangeRateToPLN: 1.0,
           receiptUrl,
-        });
+          projectId,
+          newProject: projectToCreate,
+        }) as { projectId?: number | null };
+        projectId = saved.projectId ?? projectId;
+        projectToCreate = null;
       }
       toast.success(`Dodano wydatki z paragonu: ${validGroups.length}`);
       router.push("/expenses");
@@ -421,6 +465,31 @@ export default function NewExpensePage() {
               className="w-full px-4 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+          </div>
+
+          <div className="space-y-3 border-t border-stone-100 pt-5 dark:border-stone-800">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Projekt (opcjonalnie)</label>
+              {!creatingProject && <button type="button" onClick={() => { setSelectedProjectId(""); setCreatingProject(true); }} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">+ Nowy projekt</button>}
+            </div>
+            {!creatingProject ? (
+              <select
+                value={selectedProjectId}
+                disabled={projectsLoading}
+                onChange={(event) => setSelectedProjectId(event.target.value)}
+                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 dark:border-stone-800 dark:bg-stone-950 dark:text-white"
+              >
+                <option value="">Bez projektu</option>
+                {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+              </select>
+            ) : (
+              <div className="grid gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+                <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-stone-900 dark:text-white">Nowy projekt</p><button type="button" onClick={() => setCreatingProject(false)} className="text-sm text-stone-500 hover:text-stone-900 dark:hover:text-white">Anuluj</button></div>
+                <input value={newProjectName} maxLength={120} onChange={(event) => setNewProjectName(event.target.value)} placeholder="Nazwa, np. Remont łazienki" className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white" />
+                <input type="number" min="0.01" step="0.01" value={newProjectBudget} onChange={(event) => setNewProjectBudget(event.target.value)} placeholder="Budżet projektu (PLN)" className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white" />
+                <p className="text-xs text-stone-500 dark:text-stone-400">Projekt i wydatek zostaną zapisane razem. Ten wydatek nadal trafi do zwykłej ewidencji i rozliczeń.</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

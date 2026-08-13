@@ -105,6 +105,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(body),
     }),
+  patch: (endpoint: string, body: unknown) =>
+    fetchWithAuth(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   delete: (endpoint: string) => fetchWithAuth(endpoint, { method: "DELETE" }),
   postFormData: (endpoint: string, body: FormData) =>
     fetchWithAuth(endpoint, {

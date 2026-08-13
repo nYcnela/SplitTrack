@@ -14,4 +14,5 @@ public class ProjectExpenseDTO {
     private String description;
     private BigDecimal amountPLN;
     private List<String> imageUrls;
+    private String source;
 }

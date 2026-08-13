@@ -1,22 +1,78 @@
 "use client";
 
-import { useState } from "react";
-import type { ExpenseDTO } from "@/lib/types";
+import { useEffect, useState } from "react";
+import type { ExpenseDTO, ProjectDTO } from "@/lib/types";
 import { formatDateString } from "@/lib/date";
-import { getApiBaseUrl } from "@/lib/api";
+import { api, getApiBaseUrl } from "@/lib/api";
 
 interface Props {
   expenses: ExpenseDTO[];
   loading?: boolean;
+  onExpenseUpdated?: (expense: ExpenseDTO) => void;
 }
 
-export function ExpensesTable({ expenses, loading }: Props) {
+export function ExpensesTable({ expenses, loading, onExpenseUpdated }: Props) {
   const [receiptPreview, setReceiptPreview] = useState<{ urls: string[]; index: number; title: string } | null>(null);
+  const [projects, setProjects] = useState<ProjectDTO[]>([]);
+  const [assignmentExpense, setAssignmentExpense] = useState<ExpenseDTO | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectBudget, setNewProjectBudget] = useState("");
+  const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
   const API_BASE_URL = getApiBaseUrl();
   const decimalFormatter = new Intl.NumberFormat("pl-PL", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+
+  const loadProjects = async () => {
+    const response = await api.get("/api/projects") as ProjectDTO[];
+    setProjects(response);
+  };
+
+  useEffect(() => {
+    loadProjects().catch(() => setProjects([]));
+  }, []);
+
+  const openProjectAssignment = (expense: ExpenseDTO) => {
+    setAssignmentExpense(expense);
+    setSelectedProjectId(expense.projectId ? String(expense.projectId) : "");
+    setCreatingProject(false);
+    setNewProjectName("");
+    setNewProjectBudget("");
+    setAssignmentError(null);
+  };
+
+  const saveProjectAssignment = async () => {
+    if (!assignmentExpense) return;
+    let newProject = null;
+    if (creatingProject) {
+      const budgetPLN = Number(newProjectBudget);
+      if (!newProjectName.trim() || !Number.isFinite(budgetPLN) || budgetPLN <= 0) {
+        setAssignmentError("Podaj nazwę i dodatni budżet nowego projektu");
+        return;
+      }
+      newProject = { name: newProjectName.trim(), description: "", budgetPLN };
+    }
+
+    try {
+      setAssignmentSaving(true);
+      setAssignmentError(null);
+      const updated = await api.patch(`/api/expenses/${assignmentExpense.id}/project`, {
+        projectId: creatingProject || !selectedProjectId ? null : Number(selectedProjectId),
+        newProject,
+      }) as ExpenseDTO;
+      if (creatingProject) await loadProjects();
+      onExpenseUpdated?.(updated);
+      setAssignmentExpense(null);
+    } catch (error) {
+      setAssignmentError(error instanceof Error ? error.message : "Nie udało się zmienić projektu");
+    } finally {
+      setAssignmentSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -115,6 +171,7 @@ export function ExpensesTable({ expenses, loading }: Props) {
               <th className="px-6 py-4 font-medium text-right">PLN</th>
               <th className="px-6 py-4 font-medium">Tryb</th>
               <th className="px-6 py-4 font-medium">Waluta</th>
+              <th className="px-6 py-4 font-medium">Projekt</th>
               <th className="px-6 py-4 font-medium">Paragon</th>
             </tr>
           </thead>
@@ -166,6 +223,17 @@ export function ExpensesTable({ expenses, loading }: Props) {
                         <span className="text-[11px] text-stone-400 dark:text-stone-600">—</span>
                       </div>
                     )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <button
+                      type="button"
+                      onClick={() => openProjectAssignment(exp)}
+                      className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-medium text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 dark:border-stone-800 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
+                    >
+                      {exp.projectId
+                        ? projects.find((project) => project.id === exp.projectId)?.name ?? `Projekt #${exp.projectId}`
+                        : "Przypisz"}
+                    </button>
                   </td>
                   <td className="px-6 py-4">
                     {receiptUrls.length > 0 ? (
@@ -264,6 +332,56 @@ export function ExpensesTable({ expenses, loading }: Props) {
               >
                 Otwórz w nowej karcie
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {assignmentExpense && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={() => !assignmentSaving && setAssignmentExpense(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-2xl border border-stone-200 bg-white p-5 shadow-xl dark:border-stone-800 dark:bg-stone-900 sm:rounded-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-bold text-stone-900 dark:text-white">Przypisz do projektu</h2>
+                <p className="mt-1 line-clamp-2 text-sm text-stone-500 dark:text-stone-400">{assignmentExpense.description}</p>
+              </div>
+              <button type="button" onClick={() => setAssignmentExpense(null)} disabled={assignmentSaving} className="text-sm text-stone-500 hover:text-stone-900 dark:hover:text-white">Zamknij</button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {!creatingProject ? (
+                <>
+                  <label className="grid gap-2 text-sm font-medium text-stone-700 dark:text-stone-300">
+                    <span>Projekt</span>
+                    <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white">
+                      <option value="">Bez projektu</option>
+                      {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+                    </select>
+                  </label>
+                  <button type="button" onClick={() => { setSelectedProjectId(""); setCreatingProject(true); setAssignmentError(null); }} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">+ Utwórz nowy projekt</button>
+                </>
+              ) : (
+                <div className="grid gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+                  <div className="flex items-center justify-between"><p className="text-sm font-semibold text-stone-900 dark:text-white">Nowy projekt</p><button type="button" onClick={() => { setCreatingProject(false); setAssignmentError(null); }} className="text-sm text-stone-500">Wybierz istniejący</button></div>
+                  <input value={newProjectName} maxLength={120} onChange={(event) => setNewProjectName(event.target.value)} placeholder="Nazwa projektu" className="rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white" />
+                  <input type="number" min="0.01" step="0.01" value={newProjectBudget} onChange={(event) => setNewProjectBudget(event.target.value)} placeholder="Budżet projektu (PLN)" className="rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white" />
+                </div>
+              )}
+
+              {assignmentError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">{assignmentError}</p>}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-stone-200 pt-4 dark:border-stone-800">
+              <button type="button" onClick={() => setAssignmentExpense(null)} disabled={assignmentSaving} className="px-3 py-2 text-sm font-medium text-stone-600 dark:text-stone-300">Anuluj</button>
+              <button type="button" onClick={saveProjectAssignment} disabled={assignmentSaving} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{assignmentSaving ? "Zapisywanie..." : selectedProjectId || creatingProject ? "Przypisz" : assignmentExpense.projectId ? "Odepnij projekt" : "Zapisz"}</button>
             </div>
           </div>
         </div>

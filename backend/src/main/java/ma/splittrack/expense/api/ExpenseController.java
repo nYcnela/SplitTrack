@@ -10,6 +10,7 @@ import ma.splittrack.common.domain.Scope;
 import ma.splittrack.common.web.PageResponse;
 import ma.splittrack.expense.api.dto.ExpenseCreateRequest;
 import ma.splittrack.expense.api.dto.ExpenseDTO;
+import ma.splittrack.expense.api.dto.ExpenseProjectAssignmentRequest;
 import ma.splittrack.expense.api.dto.ReceiptOcrResponse;
 import ma.splittrack.expense.api.dto.ReceiptUploadResponse;
 import ma.splittrack.expense.application.ExpenseReceiptStorageService;
@@ -22,6 +23,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,6 +54,15 @@ public class ExpenseController {
     @Operation(summary = "Create a new expense")
     public ExpenseDTO createExpense(@Valid @RequestBody ExpenseCreateRequest request) {
         return expenseService.create(request);
+    }
+
+    @PatchMapping("/expenses/{expenseId}/project")
+    @Operation(summary = "Assign, change or remove an expense project")
+    public ExpenseDTO assignExpenseProject(
+        @PathVariable("expenseId") Long expenseId,
+        @Valid @RequestBody ExpenseProjectAssignmentRequest request
+    ) {
+        return expenseService.assignProject(expenseId, request);
     }
 
     @PostMapping(value = "/expenses/receipt", consumes = "multipart/form-data")

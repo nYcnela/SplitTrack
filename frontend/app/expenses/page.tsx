@@ -124,7 +124,11 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <ExpensesTable expenses={expenses} loading={loading} />
+      <ExpensesTable
+        expenses={expenses}
+        loading={loading}
+        onExpenseUpdated={(updated) => setExpenses((current) => current.map((expense) => expense.id === updated.id ? updated : expense))}
+      />
 
       {!loading && totalPages > 1 && (
         <div className="flex items-center justify-between p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-sm">

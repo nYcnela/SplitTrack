@@ -60,6 +60,9 @@ public class Expense {
     @Column(name = "receipt_url")
     private String receiptUrl;
 
+    @Column(name = "project_id")
+    private Long projectId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;

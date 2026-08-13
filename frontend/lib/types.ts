@@ -17,6 +17,7 @@ export interface ExpenseDTO {
   settlementMode: SettlementMode;
   customOwedPLN?: number | null;
   receiptUrl?: string | null;
+  projectId?: number | null;
 
   maciekPaid?: number | null;
   emilkaPaid?: number | null;
@@ -109,6 +110,7 @@ export interface ProjectExpenseDTO {
   description: string;
   amountPLN: number;
   imageUrls: string[];
+  source: "PROJECT_EXPENSE" | "EXPENSE";
 }
 
 export interface ProjectDTO {

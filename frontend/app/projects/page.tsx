@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { ArrowLeft, CalendarDays, Camera, FolderKanban, GripVertical, Pencil, Plus, ReceiptText, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ const newExpense = (): ExpenseDraft => ({
 const money = new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" });
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<ProjectDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -105,7 +107,7 @@ export default function ProjectsPage() {
           <h1 className="mt-2 text-3xl font-bold text-stone-900 dark:text-white">{selectedProject?.name ?? "Projekty"}</h1>
           {selectedProject && <p className="mt-1 text-stone-500 dark:text-stone-400">{selectedProject.description || "Wydatki i rachunki przypisane do projektu."}</p>}
         </div>
-        <button onClick={() => selectedProject ? setExpenseContext({ projectId: selectedProject.id }) : setProjectDraft({ ...emptyProject })} className="inline-flex items-center justify-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
+        <button onClick={() => selectedProject ? router.push(`/expenses/new?projectId=${selectedProject.id}`) : setProjectDraft({ ...emptyProject })} className="inline-flex items-center justify-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
           {selectedProject ? <><Plus className="h-4 w-4" /> Dodaj wydatek</> : <><FolderKanban className="h-4 w-4" /> Nowy projekt</>}
         </button>
       </div>
@@ -117,7 +119,7 @@ export default function ProjectsPage() {
           project={selectedProject}
           onEditProject={() => setEditingProject(selectedProject)}
           onDeleteProject={() => setDeleteTarget({ type: "project", project: selectedProject })}
-          onAddExpense={() => setExpenseContext({ projectId: selectedProject.id })}
+          onAddExpense={() => router.push(`/expenses/new?projectId=${selectedProject.id}`)}
           onEditExpense={(expense) => setExpenseContext({ projectId: selectedProject.id, expense })}
           onDeleteExpense={(expense) => setDeleteTarget({ type: "expense", projectId: selectedProject.id, expense })}
         />
@@ -191,7 +193,7 @@ function ProjectDetails({ project, onEditProject, onDeleteProject, onAddExpense,
       </div>
       <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3 dark:border-stone-800"><div><p className="font-bold text-stone-900 dark:text-white">Wydatki</p><p className="text-xs text-stone-500">{project.expenses.length} pozycji</p></div><button onClick={onAddExpense} className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"><Plus className="h-4 w-4" /> Dodaj</button></div>
       <div className="project-expense-scroll max-h-[48dvh] overflow-y-auto overscroll-contain">
-        {project.expenses.length === 0 ? <div className="px-4 py-12 text-center"><ReceiptText className="mx-auto h-8 w-8 text-stone-400" /><p className="mt-3 font-semibold text-stone-900 dark:text-white">Brak wydatków</p><p className="mt-1 text-sm text-stone-500">Dodaj pierwszy rachunek do tego projektu.</p></div> : project.expenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} onEdit={() => onEditExpense(expense)} onDelete={() => onDeleteExpense(expense)} />)}
+        {project.expenses.length === 0 ? <div className="px-4 py-12 text-center"><ReceiptText className="mx-auto h-8 w-8 text-stone-400" /><p className="mt-3 font-semibold text-stone-900 dark:text-white">Brak wydatków</p><p className="mt-1 text-sm text-stone-500">Dodaj pierwszy rachunek do tego projektu.</p></div> : project.expenses.map((expense) => <ExpenseRow key={`${expense.source}-${expense.id}`} expense={expense} onEdit={expense.source === "PROJECT_EXPENSE" ? () => onEditExpense(expense) : undefined} onDelete={expense.source === "PROJECT_EXPENSE" ? () => onDeleteExpense(expense) : undefined} />)}
       </div>
     </section>
   );
@@ -203,14 +205,14 @@ function BudgetDonut({ percent }: { percent: number }) {
   return <div className="project-budget-donut mx-auto flex h-40 w-40 items-center justify-center rounded-full" style={{ background: `conic-gradient(${color} ${shown * 3.6}deg, var(--project-donut-track) 0deg)` }} role="img" aria-label={`Wykorzystano ${Math.round(percent)} procent budżetu`}><div className="project-budget-donut-center flex h-28 w-28 flex-col items-center justify-center rounded-full"><span className={`text-2xl font-bold ${percent > 100 ? "text-red-600" : "text-stone-900 dark:text-white"}`}>{Math.round(percent)}%</span><span className="text-xs font-semibold text-stone-500">budżetu</span></div></div>;
 }
 
-function ExpenseRow({ expense, onEdit, onDelete }: { expense: ProjectExpenseDTO; onEdit: () => void; onDelete: () => void }) {
+function ExpenseRow({ expense, onEdit, onDelete }: { expense: ProjectExpenseDTO; onEdit?: () => void; onDelete?: () => void }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   return <article className="shopping-list-item flex gap-3 p-4 hover:bg-stone-50 dark:hover:bg-stone-950">
     <div className="flex min-w-0 flex-1 gap-3">
       {expense.imageUrls.length > 0 ? <button onClick={() => setPreviewUrl(expense.imageUrls[0])} className="relative h-14 w-14 shrink-0 overflow-hidden border border-stone-200 bg-stone-50 dark:border-stone-800"><img src={imageSrc(expense.imageUrls[0])} alt="Rachunek" className="h-full w-full object-cover" />{expense.imageUrls.length > 1 && <span className="absolute bottom-0 right-0 bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">+{expense.imageUrls.length - 1}</span>}</button> : <div className="flex h-14 w-14 shrink-0 items-center justify-center border border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950"><ReceiptText className="h-5 w-5 text-stone-400" /></div>}
-      <div className="min-w-0"><p className="font-semibold text-stone-900 dark:text-white">{expense.description}</p><p className="mt-1 text-lg font-bold text-indigo-600 dark:text-indigo-400">{money.format(expense.amountPLN)}</p><p className="mt-1 inline-flex items-center gap-1 text-xs text-stone-500"><CalendarDays className="h-3 w-3" /> {new Date(`${expense.expenseDate}T12:00:00`).toLocaleDateString("pl-PL")}</p></div>
+      <div className="min-w-0"><p className="font-semibold text-stone-900 dark:text-white">{expense.description}</p><p className="mt-1 text-lg font-bold text-indigo-600 dark:text-indigo-400">{money.format(expense.amountPLN)}</p><p className="mt-1 inline-flex items-center gap-1 text-xs text-stone-500"><CalendarDays className="h-3 w-3" /> {new Date(`${expense.expenseDate}T12:00:00`).toLocaleDateString("pl-PL")}</p>{expense.source === "EXPENSE" && <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">Zwykły wydatek — uwzględniony w rozliczeniach</p>}</div>
     </div>
-    <div className="flex gap-1"><IconButton label="Edytuj wydatek" onClick={onEdit}><Pencil /></IconButton><IconButton label="Usuń wydatek" onClick={onDelete}><Trash2 /></IconButton></div>
+    {onEdit && onDelete && <div className="flex gap-1"><IconButton label="Edytuj wydatek" onClick={onEdit}><Pencil /></IconButton><IconButton label="Usuń wydatek" onClick={onDelete}><Trash2 /></IconButton></div>}
     {previewUrl && createPortal(<ImageViewer urls={expense.imageUrls} initialUrl={previewUrl} onClose={() => setPreviewUrl(null)} />, document.body)}
   </article>;
 }

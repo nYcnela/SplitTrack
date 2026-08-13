@@ -15,9 +15,13 @@ import ma.splittrack.common.domain.SettlementMode;
 import ma.splittrack.common.web.PageResponse;
 import ma.splittrack.expense.api.dto.ExpenseCreateRequest;
 import ma.splittrack.expense.api.dto.ExpenseDTO;
+import ma.splittrack.expense.api.dto.ExpenseProjectAssignmentRequest;
 import ma.splittrack.expense.domain.Expense;
 import ma.splittrack.expense.infrastructure.ExpenseRepository;
 import ma.splittrack.expense.infrastructure.ExpenseSpecifications;
+import ma.splittrack.project.api.dto.ProjectRequest;
+import ma.splittrack.project.application.ProjectService;
+import ma.splittrack.project.infrastructure.ProjectRepository;
 import ma.splittrack.summary.domain.BalanceCalculator;
 import ma.splittrack.summary.domain.ImpliedTransfer;
 import org.springframework.data.domain.Page;
@@ -30,11 +34,16 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final ExpenseScopeResolver scopeResolver;
     private final BalanceCalculator balanceCalculator;
+    private final ProjectRepository projectRepository;
+    private final ProjectService projectService;
 
-    public ExpenseService(ExpenseRepository expenseRepository, ExpenseScopeResolver scopeResolver, BalanceCalculator balanceCalculator) {
+    public ExpenseService(ExpenseRepository expenseRepository, ExpenseScopeResolver scopeResolver, BalanceCalculator balanceCalculator,
+                          ProjectRepository projectRepository, ProjectService projectService) {
         this.expenseRepository = expenseRepository;
         this.scopeResolver = scopeResolver;
         this.balanceCalculator = balanceCalculator;
+        this.projectRepository = projectRepository;
+        this.projectService = projectService;
     }
 
     @Transactional
@@ -71,6 +80,7 @@ public class ExpenseService {
         expense.setExchangeRateToPLN(exchangeRate);
         expense.setAmountPLN(amountPLN);
         expense.setReceiptUrl(normalizeOptionalText(request.getReceiptUrl()));
+        expense.setProjectId(resolveProjectId(request.getProjectId(), request.getNewProject()));
 
         Expense saved = expenseRepository.save(expense);
         return toDTO(saved);
@@ -105,6 +115,15 @@ public class ExpenseService {
         return new PageResponse<>(items, meta);
     }
 
+    @Transactional
+    public ExpenseDTO assignProject(Long expenseId, ExpenseProjectAssignmentRequest request) {
+        validateProjectSelection(request.getProjectId(), request.getNewProject());
+        Expense expense = expenseRepository.findById(expenseId)
+            .orElseThrow(() -> new IllegalArgumentException("Wydatek nie istnieje"));
+        expense.setProjectId(resolveProjectId(request.getProjectId(), request.getNewProject()));
+        return toDTO(expense);
+    }
+
     @Transactional(readOnly = true)
     public List<Expense> listForExport(Scope scope, YearMonth month, String query, LocalDate dateFrom, LocalDate dateTo) {
         if (scope == Scope.CYCLE) {
@@ -132,6 +151,7 @@ public class ExpenseService {
         dto.setSettlementMode(expense.getSettlementMode());
         dto.setCustomOwedPLN(expense.getCustomOwedPLN());
         dto.setReceiptUrl(expense.getReceiptUrl());
+        dto.setProjectId(expense.getProjectId());
 
         if (expense.getPayer() == Person.MACIEK) {
             dto.setMaciekPaid(expense.getAmountPLN());
@@ -160,6 +180,26 @@ public class ExpenseService {
                 throw new IllegalArgumentException("customOwedPLN must be null unless settlementMode is CUSTOM");
             }
         }
+        validateProjectSelection(request.getProjectId(), request.getNewProject());
+    }
+
+    private void validateProjectSelection(Long projectId, ProjectRequest newProject) {
+        if (projectId != null && newProject != null) {
+            throw new IllegalArgumentException("Wybierz istniejący projekt albo utwórz nowy");
+        }
+    }
+
+    private Long resolveProjectId(Long projectId, ProjectRequest newProject) {
+        if (newProject != null) {
+            return projectService.create(newProject).getId();
+        }
+        if (projectId == null) {
+            return null;
+        }
+        if (!projectRepository.existsById(projectId)) {
+            throw new IllegalArgumentException("Projekt nie istnieje");
+        }
+        return projectId;
     }
 
     private BigDecimal scale2(BigDecimal value) {
