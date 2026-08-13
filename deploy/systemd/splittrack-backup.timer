@@ -1,0 +1,11 @@
+[Unit]
+Description=Codzienna kopia zapasowa SplitTrack o północy
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Persistent=true
+AccuracySec=1min
+Unit=splittrack-backup.service
+
+[Install]
+WantedBy=timers.target

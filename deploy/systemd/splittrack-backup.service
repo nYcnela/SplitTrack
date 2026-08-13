@@ -1,0 +1,10 @@
+[Unit]
+Description=Kopia zapasowa bazy i zdjęć SplitTrack
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/maciek/Hostowane projekty/SplitTrack
+ExecStart="/home/maciek/Hostowane projekty/SplitTrack/scripts/backup-splittrack.sh"
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
