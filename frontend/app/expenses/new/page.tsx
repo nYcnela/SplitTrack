@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ArrowLeft, Check, ChevronDown, Loader2, Pencil, Split, Upload, User, X } from "lucide-react";
 import Link from "next/link";
+import { AppSelect } from "@/components/AppSelect";
 
 const expenseSchema = z.object({
   expenseDate: z.string().min(1, "Data jest wymagana"),
@@ -473,15 +474,13 @@ export default function NewExpensePage() {
               {!creatingProject && <button type="button" onClick={() => { setSelectedProjectId(""); setCreatingProject(true); }} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">+ Nowy projekt</button>}
             </div>
             {!creatingProject ? (
-              <select
+              <AppSelect
+                ariaLabel="Projekt"
                 value={selectedProjectId}
                 disabled={projectsLoading}
-                onChange={(event) => setSelectedProjectId(event.target.value)}
-                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 dark:border-stone-800 dark:bg-stone-950 dark:text-white"
-              >
-                <option value="">Bez projektu</option>
-                {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-              </select>
+                onChange={setSelectedProjectId}
+                options={[{ value: "", label: "Bez projektu" }, ...projects.map((project) => ({ value: String(project.id), label: project.name }))]}
+              />
             ) : (
               <div className="grid gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/20">
                 <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-stone-900 dark:text-white">Nowy projekt</p><button type="button" onClick={() => setCreatingProject(false)} className="text-sm text-stone-500 hover:text-stone-900 dark:hover:text-white">Anuluj</button></div>

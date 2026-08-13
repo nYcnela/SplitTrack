@@ -6,11 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Loader2, ArrowRightLeft, ChevronDown } from "lucide-react";
+import { Loader2, ArrowRightLeft } from "lucide-react";
 import type { SettlementDTO, Scope } from "@/lib/types";
 import { SettlementsTable } from "@/components/SettlementsTable";
 import { MonthPicker } from "@/components/MonthPicker";
 import { getSafeCurrentMonthString, getPreviousMonth, getNextMonth } from "@/lib/date";
+import { AppSelect } from "@/components/AppSelect";
 
 const settlementSchema = z.object({
   fromPerson: z.enum(["MACIEK", "EMILKA"]),
@@ -81,9 +82,6 @@ export default function SettlementsPage() {
 
   const { watch, setValue, handleSubmit, reset, formState: { errors } } = form;
   const fromPerson = watch("fromPerson");
-  const personSelectClassName =
-    "w-full appearance-none px-3 pr-10 py-2 border border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-white theme-e:text-[#4a3840] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-stone-300 dark:hover:border-stone-700 text-sm font-medium";
-
   const handleSwapPeople = () => {
     setValue("fromPerson", fromPerson === "MACIEK" ? "EMILKA" : "MACIEK", {
       shouldDirty: true,
@@ -129,16 +127,7 @@ export default function SettlementsPage() {
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-stone-500">Kto oddaje?</label>
-                  <div className="relative">
-                    <select
-                      {...form.register("fromPerson")}
-                      className={personSelectClassName}
-                    >
-                      <option value="MACIEK">Maciek</option>
-                      <option value="EMILKA">Emilka</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 dark:text-stone-400 theme-e:text-[#8b6d7c]" />
-                  </div>
+                  <AppSelect ariaLabel="Kto oddaje" value={fromPerson} onChange={(value) => setValue("fromPerson", value as "MACIEK" | "EMILKA", { shouldDirty: true, shouldValidate: true })} options={[{ value: "MACIEK", label: "Maciek" }, { value: "EMILKA", label: "Emilka" }]} />
                 </div>
                 
                 <button
@@ -153,16 +142,7 @@ export default function SettlementsPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-stone-500">Komu?</label>
-                  <div className="relative">
-                    <select
-                      {...form.register("toPerson")}
-                      className={personSelectClassName}
-                    >
-                      <option value="MACIEK">Maciek</option>
-                      <option value="EMILKA">Emilka</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 dark:text-stone-400 theme-e:text-[#8b6d7c]" />
-                  </div>
+                  <AppSelect ariaLabel="Komu" value={watch("toPerson")} onChange={(value) => setValue("toPerson", value as "MACIEK" | "EMILKA", { shouldDirty: true, shouldValidate: true })} options={[{ value: "MACIEK", label: "Maciek" }, { value: "EMILKA", label: "Emilka" }]} />
                 </div>
               </div>
               {errors.toPerson && <p className="text-xs text-red-500">{errors.toPerson.message}</p>}

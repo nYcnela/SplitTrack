@@ -41,7 +41,7 @@ export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props
             className={`p-3 rounded flex-shrink-0 ${
               isEven
                 ? "bg-emerald-200 text-emerald-700 ring-1 ring-emerald-300 shadow-sm dark:bg-emerald-900/40 dark:text-emerald-300 dark:ring-emerald-800/50 theme-e:bg-emerald-200 theme-e:text-emerald-700 theme-e:ring-emerald-300"
-                : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 theme-e:bg-amber-100 theme-e:text-amber-500"
             }`}
           >
             {isEven ? <CheckCircle2 className="w-7 h-7" /> : <ArrowRightLeft className="w-6 h-6" />}
@@ -52,7 +52,7 @@ export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props
               <p className="text-xl font-bold text-stone-900 dark:text-white">Jesteście rozliczeni (0 zł)</p>
             ) : maciekOwes ? (
               <div className="flex flex-col">
-                <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                <p className="text-xl font-bold text-amber-600 dark:text-amber-400 theme-e:text-amber-500">
                   Maciek jest winny Emilce
                 </p>
                 <p className="text-2xl font-black text-stone-900 dark:text-white mt-1">
@@ -61,7 +61,7 @@ export function SummaryCards({ summary, loading, title = "Podsumowanie" }: Props
               </div>
             ) : (
               <div className="flex flex-col">
-                <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                <p className="text-xl font-bold text-amber-600 dark:text-amber-400 theme-e:text-amber-500">
                   Emilka jest winna Maćkowi
                 </p>
                 <p className="text-2xl font-black text-stone-900 dark:text-white mt-1">

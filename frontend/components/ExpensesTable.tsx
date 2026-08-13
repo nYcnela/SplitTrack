@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ExpenseDTO, ProjectDTO } from "@/lib/types";
 import { formatDateString } from "@/lib/date";
 import { api, getApiBaseUrl } from "@/lib/api";
+import { AppSelect } from "@/components/AppSelect";
 
 interface Props {
   expenses: ExpenseDTO[];
@@ -375,10 +376,7 @@ export function ExpensesTable({ expenses, loading, onExpenseUpdated }: Props) {
                 <>
                   <label className="grid gap-2 text-sm font-medium text-stone-700 dark:text-stone-300">
                     <span>Projekt</span>
-                    <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-stone-800 dark:bg-stone-950 dark:text-white">
-                      <option value="">Bez projektu</option>
-                      {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-                    </select>
+                    <AppSelect ariaLabel="Projekt" value={selectedProjectId} onChange={setSelectedProjectId} options={[{ value: "", label: "Bez projektu" }, ...projects.map((project) => ({ value: String(project.id), label: project.name }))]} />
                   </label>
                   <button type="button" onClick={() => { setSelectedProjectId(""); setCreatingProject(true); setAssignmentError(null); }} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">+ Utwórz nowy projekt</button>
                 </>
