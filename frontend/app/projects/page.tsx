@@ -122,6 +122,9 @@ export default function ProjectsPage() {
           onAddExpense={() => router.push(`/expenses/new?projectId=${selectedProject.id}`)}
           onEditExpense={(expense) => setExpenseContext({ projectId: selectedProject.id, expense })}
           onDeleteExpense={(expense) => setDeleteTarget({ type: "expense", projectId: selectedProject.id, expense })}
+          onOpenExpense={(expense) => expense.source === "EXPENSE"
+            ? router.push(`/expenses/${expense.id}`)
+            : setExpenseContext({ projectId: selectedProject.id, expense })}
         />
       ) : projects.length === 0 ? (
         <div className="border border-dashed border-stone-300 py-16 text-center dark:border-stone-700">
@@ -176,7 +179,7 @@ function ProjectPreview({ project, onOpen, onEdit, onDelete, onDragStart, onDrop
   );
 }
 
-function ProjectDetails({ project, onEditProject, onDeleteProject, onAddExpense, onEditExpense, onDeleteExpense }: { project: ProjectDTO; onEditProject: () => void; onDeleteProject: () => void; onAddExpense: () => void; onEditExpense: (expense: ProjectExpenseDTO) => void; onDeleteExpense: (expense: ProjectExpenseDTO) => void }) {
+function ProjectDetails({ project, onEditProject, onDeleteProject, onAddExpense, onEditExpense, onDeleteExpense, onOpenExpense }: { project: ProjectDTO; onEditProject: () => void; onDeleteProject: () => void; onAddExpense: () => void; onEditExpense: (expense: ProjectExpenseDTO) => void; onDeleteExpense: (expense: ProjectExpenseDTO) => void; onOpenExpense: (expense: ProjectExpenseDTO) => void }) {
   const percent = project.budgetPLN > 0 ? project.spentPLN / project.budgetPLN * 100 : 0;
   const remaining = project.budgetPLN - project.spentPLN;
   return (
@@ -193,7 +196,7 @@ function ProjectDetails({ project, onEditProject, onDeleteProject, onAddExpense,
       </div>
       <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3 dark:border-stone-800"><div><p className="font-bold text-stone-900 dark:text-white">Wydatki</p><p className="text-xs text-stone-500">{project.expenses.length} pozycji</p></div><button onClick={onAddExpense} className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"><Plus className="h-4 w-4" /> Dodaj</button></div>
       <div className="project-expense-scroll max-h-[48dvh] overflow-y-auto overscroll-contain">
-        {project.expenses.length === 0 ? <div className="px-4 py-12 text-center"><ReceiptText className="mx-auto h-8 w-8 text-stone-400" /><p className="mt-3 font-semibold text-stone-900 dark:text-white">Brak wydatków</p><p className="mt-1 text-sm text-stone-500">Dodaj pierwszy rachunek do tego projektu.</p></div> : project.expenses.map((expense) => <ExpenseRow key={`${expense.source}-${expense.id}`} expense={expense} onEdit={expense.source === "PROJECT_EXPENSE" ? () => onEditExpense(expense) : undefined} onDelete={expense.source === "PROJECT_EXPENSE" ? () => onDeleteExpense(expense) : undefined} />)}
+        {project.expenses.length === 0 ? <div className="px-4 py-12 text-center"><ReceiptText className="mx-auto h-8 w-8 text-stone-400" /><p className="mt-3 font-semibold text-stone-900 dark:text-white">Brak wydatków</p><p className="mt-1 text-sm text-stone-500">Dodaj pierwszy rachunek do tego projektu.</p></div> : project.expenses.map((expense) => <ExpenseRow key={`${expense.source}-${expense.id}`} expense={expense} onOpen={() => onOpenExpense(expense)} onEdit={expense.source === "PROJECT_EXPENSE" ? () => onEditExpense(expense) : undefined} onDelete={expense.source === "PROJECT_EXPENSE" ? () => onDeleteExpense(expense) : undefined} />)}
       </div>
     </section>
   );
@@ -205,14 +208,14 @@ function BudgetDonut({ percent }: { percent: number }) {
   return <div className="project-budget-donut mx-auto flex h-40 w-40 items-center justify-center rounded-full" style={{ background: `conic-gradient(${color} ${shown * 3.6}deg, var(--project-donut-track) 0deg)` }} role="img" aria-label={`Wykorzystano ${Math.round(percent)} procent budżetu`}><div className="project-budget-donut-center flex h-28 w-28 flex-col items-center justify-center rounded-full"><span className={`text-2xl font-bold ${percent > 100 ? "text-red-600" : "text-stone-900 dark:text-white"}`}>{Math.round(percent)}%</span><span className="text-xs font-semibold text-stone-500">budżetu</span></div></div>;
 }
 
-function ExpenseRow({ expense, onEdit, onDelete }: { expense: ProjectExpenseDTO; onEdit?: () => void; onDelete?: () => void }) {
+function ExpenseRow({ expense, onOpen, onEdit, onDelete }: { expense: ProjectExpenseDTO; onOpen: () => void; onEdit?: () => void; onDelete?: () => void }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  return <article className="shopping-list-item flex gap-3 p-4 hover:bg-stone-50 dark:hover:bg-stone-950">
+  return <article role="link" tabIndex={0} onClick={onOpen} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen(); } }} className="shopping-list-item flex cursor-pointer gap-3 p-4 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:hover:bg-stone-950">
     <div className="flex min-w-0 flex-1 gap-3">
-      {expense.imageUrls.length > 0 ? <button onClick={() => setPreviewUrl(expense.imageUrls[0])} className="relative h-14 w-14 shrink-0 overflow-hidden border border-stone-200 bg-stone-50 dark:border-stone-800"><img src={imageSrc(expense.imageUrls[0])} alt="Rachunek" className="h-full w-full object-cover" />{expense.imageUrls.length > 1 && <span className="absolute bottom-0 right-0 bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">+{expense.imageUrls.length - 1}</span>}</button> : <div className="flex h-14 w-14 shrink-0 items-center justify-center border border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950"><ReceiptText className="h-5 w-5 text-stone-400" /></div>}
+      {expense.imageUrls.length > 0 ? <button onClick={(event) => { event.stopPropagation(); setPreviewUrl(expense.imageUrls[0]); }} className="relative h-14 w-14 shrink-0 overflow-hidden border border-stone-200 bg-stone-50 dark:border-stone-800"><img src={imageSrc(expense.imageUrls[0])} alt="Rachunek" className="h-full w-full object-cover" />{expense.imageUrls.length > 1 && <span className="absolute bottom-0 right-0 bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">+{expense.imageUrls.length - 1}</span>}</button> : <div className="flex h-14 w-14 shrink-0 items-center justify-center border border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950"><ReceiptText className="h-5 w-5 text-stone-400" /></div>}
       <div className="min-w-0"><p className="font-semibold text-stone-900 dark:text-white">{expense.description}</p><p className="mt-1 text-lg font-bold text-indigo-600 dark:text-indigo-400">{money.format(expense.amountPLN)}</p><p className="mt-1 inline-flex items-center gap-1 text-xs text-stone-500"><CalendarDays className="h-3 w-3" /> {new Date(`${expense.expenseDate}T12:00:00`).toLocaleDateString("pl-PL")}</p>{expense.source === "EXPENSE" && <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">Zwykły wydatek — uwzględniony w rozliczeniach</p>}</div>
     </div>
-    {onEdit && onDelete && <div className="flex gap-1"><IconButton label="Edytuj wydatek" onClick={onEdit}><Pencil /></IconButton><IconButton label="Usuń wydatek" onClick={onDelete}><Trash2 /></IconButton></div>}
+    {onEdit && onDelete && <div className="flex gap-1" onClick={(event) => event.stopPropagation()}><IconButton label="Edytuj wydatek" onClick={onEdit}><Pencil /></IconButton><IconButton label="Usuń wydatek" onClick={onDelete}><Trash2 /></IconButton></div>}
     {previewUrl && createPortal(<ImageViewer urls={expense.imageUrls} initialUrl={previewUrl} onClose={() => setPreviewUrl(null)} />, document.body)}
   </article>;
 }
@@ -253,7 +256,7 @@ function ExpenseDialog({ context, onClose, onSaved }: { context: ExpenseContext;
 
 function ImageViewer({ urls, initialUrl, onClose }: { urls: string[]; initialUrl: string; onClose: () => void }) {
   const [active, setActive] = useState(initialUrl);
-  return <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" onClick={onClose}><button type="button" onClick={onClose} className="absolute right-4 top-4 p-2 text-white" aria-label="Zamknij"><X /></button><img src={imageSrc(active)} alt="Zdjęcie rachunku" className="max-h-[75dvh] max-w-full object-contain" onClick={(event) => event.stopPropagation()} />{urls.length > 1 && <div className="mt-4 flex max-w-full gap-2 overflow-x-auto" onClick={(event) => event.stopPropagation()}>{urls.map((url) => <button key={url} onClick={() => setActive(url)} className={`h-14 w-14 shrink-0 overflow-hidden border-2 ${active === url ? "border-white" : "border-transparent opacity-60"}`}><img src={imageSrc(url)} alt="Miniatura rachunku" className="h-full w-full object-cover" /></button>)}</div>}</div>;
+  return <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" onClick={(event) => { event.stopPropagation(); onClose(); }}><button type="button" onClick={onClose} className="absolute right-4 top-4 p-2 text-white" aria-label="Zamknij"><X /></button><img src={imageSrc(active)} alt="Zdjęcie rachunku" className="max-h-[75dvh] max-w-full object-contain" onClick={(event) => event.stopPropagation()} />{urls.length > 1 && <div className="mt-4 flex max-w-full gap-2 overflow-x-auto" onClick={(event) => event.stopPropagation()}>{urls.map((url) => <button key={url} onClick={() => setActive(url)} className={`h-14 w-14 shrink-0 overflow-hidden border-2 ${active === url ? "border-white" : "border-transparent opacity-60"}`}><img src={imageSrc(url)} alt="Miniatura rachunku" className="h-full w-full object-cover" /></button>)}</div>}</div>;
 }
 
 function imageSrc(url: string) { return url.startsWith("/") ? `${getApiBaseUrl()}${url}` : url; }

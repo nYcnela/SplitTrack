@@ -3,6 +3,7 @@ package ma.splittrack.expense.api.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -25,6 +26,7 @@ public class ExpenseDTO {
     private BigDecimal customOwedPLN;
     private String receiptUrl;
     private Long projectId;
+    private OffsetDateTime createdAt;
 
     @Schema(description = "amountPLN if payer=MACIEK, else null")
     private BigDecimal maciekPaid;

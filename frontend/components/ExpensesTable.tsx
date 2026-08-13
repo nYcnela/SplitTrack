@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ExpenseDTO, ProjectDTO } from "@/lib/types";
 import { formatDateString } from "@/lib/date";
 import { api, getApiBaseUrl } from "@/lib/api";
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function ExpensesTable({ expenses, loading, onExpenseUpdated }: Props) {
+  const router = useRouter();
   const [receiptPreview, setReceiptPreview] = useState<{ urls: string[]; index: number; title: string } | null>(null);
   const [projects, setProjects] = useState<ProjectDTO[]>([]);
   const [assignmentExpense, setAssignmentExpense] = useState<ExpenseDTO | null>(null);
@@ -179,7 +181,19 @@ export function ExpensesTable({ expenses, loading, onExpenseUpdated }: Props) {
             {expenses.map((exp) => {
               const receiptUrls = resolveReceiptUrls(exp.receiptUrl);
               return (
-                <tr key={exp.id} className="hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors">
+                <tr
+                  key={exp.id}
+                  tabIndex={0}
+                  role="link"
+                  onClick={() => router.push(`/expenses/${exp.id}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      router.push(`/expenses/${exp.id}`);
+                    }
+                  }}
+                  className="cursor-pointer hover:bg-stone-50 focus:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:hover:bg-stone-900 dark:focus:bg-stone-900 transition-colors"
+                >
                   <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
                     {formatDateString(exp.expenseDate)}
                   </td>
@@ -227,7 +241,7 @@ export function ExpensesTable({ expenses, loading, onExpenseUpdated }: Props) {
                   <td className="px-6 py-4">
                     <button
                       type="button"
-                      onClick={() => openProjectAssignment(exp)}
+                      onClick={(event) => { event.stopPropagation(); openProjectAssignment(exp); }}
                       className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-medium text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 dark:border-stone-800 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
                     >
                       {exp.projectId
@@ -239,7 +253,7 @@ export function ExpensesTable({ expenses, loading, onExpenseUpdated }: Props) {
                     {receiptUrls.length > 0 ? (
                       <button
                         type="button"
-                        onClick={() => setReceiptPreview({ urls: receiptUrls, index: 0, title: exp.description })}
+                        onClick={(event) => { event.stopPropagation(); setReceiptPreview({ urls: receiptUrls, index: 0, title: exp.description }); }}
                         className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-2"
                       >
                         {receiptUrls.length === 1 ? "Zobacz zdjęcie" : `Zobacz zdjęcia (${receiptUrls.length})`}

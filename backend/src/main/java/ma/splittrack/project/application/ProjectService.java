@@ -1,5 +1,7 @@
 package ma.splittrack.project.application;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -28,13 +30,16 @@ public class ProjectService {
     private final ProjectExpenseRepository expenseRepository;
     private final ProjectExpenseImageRepository imageRepository;
     private final ExpenseRepository regularExpenseRepository;
+    private final ObjectMapper objectMapper;
 
     public ProjectService(ProjectRepository projectRepository, ProjectExpenseRepository expenseRepository,
-                          ProjectExpenseImageRepository imageRepository, ExpenseRepository regularExpenseRepository) {
+                          ProjectExpenseImageRepository imageRepository, ExpenseRepository regularExpenseRepository,
+                          ObjectMapper objectMapper) {
         this.projectRepository = projectRepository;
         this.expenseRepository = expenseRepository;
         this.imageRepository = imageRepository;
         this.regularExpenseRepository = regularExpenseRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
@@ -184,10 +189,21 @@ public class ProjectService {
     }
 
     private List<String> receiptUrls(String receiptUrl) {
-        if (receiptUrl == null || receiptUrl.isBlank() || receiptUrl.trim().startsWith("[")) {
+        if (receiptUrl == null || receiptUrl.isBlank()) {
             return List.of();
         }
-        return List.of(receiptUrl);
+        String normalized = receiptUrl.trim();
+        if (!normalized.startsWith("[")) {
+            return List.of(normalized);
+        }
+        try {
+            return objectMapper.readValue(normalized, new TypeReference<List<String>>() {}).stream()
+                .map(this::normalizeText)
+                .filter(Objects::nonNull)
+                .toList();
+        } catch (Exception ignored) {
+            return List.of();
+        }
     }
 
     private BigDecimal money(BigDecimal value) {

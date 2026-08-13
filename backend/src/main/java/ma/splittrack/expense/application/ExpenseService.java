@@ -48,6 +48,26 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseDTO create(ExpenseCreateRequest request) {
+        Expense expense = new Expense();
+        applyRequest(expense, request);
+
+        Expense saved = expenseRepository.save(expense);
+        return toDTO(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public ExpenseDTO get(Long expenseId) {
+        return toDTO(findExpense(expenseId));
+    }
+
+    @Transactional
+    public ExpenseDTO update(Long expenseId, ExpenseCreateRequest request) {
+        Expense expense = findExpense(expenseId);
+        applyRequest(expense, request);
+        return toDTO(expense);
+    }
+
+    private void applyRequest(Expense expense, ExpenseCreateRequest request) {
         validateRequest(request);
 
         String currency = request.getInputCurrency().trim().toUpperCase(Locale.ROOT);
@@ -69,7 +89,6 @@ public class ExpenseService {
             amountPLN = inputAmount.multiply(exchangeRate).setScale(2, RoundingMode.HALF_UP);
         }
 
-        Expense expense = new Expense();
         expense.setExpenseDate(request.getExpenseDate());
         expense.setDescription(request.getDescription().trim());
         expense.setPayer(request.getPayer());
@@ -81,9 +100,6 @@ public class ExpenseService {
         expense.setAmountPLN(amountPLN);
         expense.setReceiptUrl(normalizeOptionalText(request.getReceiptUrl()));
         expense.setProjectId(resolveProjectId(request.getProjectId(), request.getNewProject()));
-
-        Expense saved = expenseRepository.save(expense);
-        return toDTO(saved);
     }
 
     @Transactional(readOnly = true)
@@ -152,6 +168,7 @@ public class ExpenseService {
         dto.setCustomOwedPLN(expense.getCustomOwedPLN());
         dto.setReceiptUrl(expense.getReceiptUrl());
         dto.setProjectId(expense.getProjectId());
+        dto.setCreatedAt(expense.getCreatedAt());
 
         if (expense.getPayer() == Person.MACIEK) {
             dto.setMaciekPaid(expense.getAmountPLN());
@@ -181,6 +198,11 @@ public class ExpenseService {
             }
         }
         validateProjectSelection(request.getProjectId(), request.getNewProject());
+    }
+
+    private Expense findExpense(Long expenseId) {
+        return expenseRepository.findById(expenseId)
+            .orElseThrow(() -> new IllegalArgumentException("Wydatek nie istnieje"));
     }
 
     private void validateProjectSelection(Long projectId, ProjectRequest newProject) {

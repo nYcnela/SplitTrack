@@ -24,6 +24,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -54,6 +55,21 @@ public class ExpenseController {
     @Operation(summary = "Create a new expense")
     public ExpenseDTO createExpense(@Valid @RequestBody ExpenseCreateRequest request) {
         return expenseService.create(request);
+    }
+
+    @GetMapping("/expenses/{expenseId}")
+    @Operation(summary = "Get an expense")
+    public ExpenseDTO getExpense(@PathVariable("expenseId") Long expenseId) {
+        return expenseService.get(expenseId);
+    }
+
+    @PutMapping("/expenses/{expenseId}")
+    @Operation(summary = "Update an expense")
+    public ExpenseDTO updateExpense(
+        @PathVariable("expenseId") Long expenseId,
+        @Valid @RequestBody ExpenseCreateRequest request
+    ) {
+        return expenseService.update(expenseId, request);
     }
 
     @PatchMapping("/expenses/{expenseId}/project")
