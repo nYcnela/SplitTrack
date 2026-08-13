@@ -161,7 +161,13 @@ Frontend bedzie pod:
 
 ---
 
-## 4) Przydatne komendy
+## 4) Automatyczne kopie zapasowe
+
+Projekt zawiera mechanizm codziennej kopii bazy PostgreSQL oraz cotygodniowej kopii zdjęć, uruchamiany przez timer systemd użytkownika.
+
+Szczegółowy opis działania, struktury katalogów, kontroli poprawności, ręcznego uruchamiania i diagnozowania błędów znajduje się w [`docs/BACKUP.md`](docs/BACKUP.md).
+
+## 5) Przydatne komendy
 
 ```bash
 # zatrzymanie
